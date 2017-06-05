@@ -35,45 +35,44 @@ class Conv2D(Layer):
 
     def forward(self, x):
         self.X = x
-        if len(x.shape) >= 2:
-            self.channel = x.shape[0]
+        self.channel = x.shape[1]
 
-        if self.x_rowcol:
+        if not self.x_rowcol:
             self.x_rowcol = int(np.sqrt(self.input_shape))
             self.y_rowcol = self.x_rowcol - self.kernel_size+1
 
-        self.X = np.reshape(self.X, (self.channel, self.x_rowcol, self.x_rowcol))
-        self.Y = np.zeros((self.filterNum, self.y_rowcol, self.y_rowcol))
+        self.X = np.reshape(self.X, (self.batch, self.channel, self.x_rowcol, self.x_rowcol))
+        self.Y = np.zeros((self.batch, self.filterNum, self.y_rowcol, self.y_rowcol))
+
         for f in range(self.filterNum):
             for c in range(self.channel):
                 for yi in range(0, self.y_rowcol, self.strides[0]):
                     for yj in range(0, self.y_rowcol, self.strides[1]):
-                        self.Y[f,yi,yj] = np.sum(np.multiply(self.X[c,yi:yi+self.kernel_size,yj:yj+self.kernel_size], self.filters[f,:,:]))
+                        self.Y[:,f,yi,yj] = np.sum(np.multiply(self.X[:,c,yi:yi+self.kernel_size,yj:yj+self.kernel_size], self.filters[f,:,:]), axis=(1,2))
 
         return self.Y
 
     def backward(self, err_delta):
-        if len(err_delta.shape) != 3:
-            err_delta = err_delta.reshpae((self.filterNum, self.y_rowcol, self.y_rowcol))
         self.E = err_delta
-        err_delta = np.zeros((self.channel, self.x_rowcol, self.x_rowcol))
+        err_delta = np.zeros((self.batch, self.channel, self.x_rowcol, self.x_rowcol))
+        # TODO : temporally using batch
+        for b in range(self.batch):
+            for yi in range(self.y_rowcol):
+                for yj in range(self.y_rowcol):
+                    err_delta[b, :, yi:yi+self.kernel_size, yj:yj+self.kernel_size] = np.add(
+                        err_delta[b, :, yi:yi+self.kernel_size, yj:yj+self.kernel_size],
+                        np.sum((self.E[b,:,yi,yj] * self.filters.T).T, axis=0))
 
-        for yi in range(self.y_rowcol):
-            for yj in range(self.y_rowcol):
-                err_delta[:, yi:yi+self.kernel_size, yj:yj+self.kernel_size] = np.add(
-                    err_delta[:, yi:yi+self.kernel_size, yj:yj+self.kernel_size],
-                    np.sum((self.E[:,yi,yj] * self.filters.T).T, axis=0))
-
+        # TODO : suspicious
         for yi in range(0, self.y_rowcol, self.strides[0]):
             for yj in range(0, self.y_rowcol, self.strides[1]):
                 self.filters -= self.optimizer(
                     self.learning_rate *
                     np.sum(np.sum(
-                            np.outer(self.E[:,yi,yj],
-                                     self.X[:,yi:yi+self.kernel_size, yj:yj+self.kernel_size]),
-                            axis=0).reshape((self.channel, self.kernel_size, self.kernel_size)),
+                            np.outer(self.E[:,:,yi,yj],
+                                     self.X[:,:,yi:yi+self.kernel_size, yj:yj+self.kernel_size]),
+                            axis=0).reshape((self.batch, self.channel, self.kernel_size, self.kernel_size)),
                         axis=0))
-
         return err_delta
 
 class MaxPooling2D(Layer):
@@ -86,29 +85,31 @@ class MaxPooling2D(Layer):
         self.X = x
         self.x_rowcol = int(np.sqrt(self.input_shape))
         self.y_rowcol = self.x_rowcol - self.kernel_size+1
-        self.channel = x.shape[0]
-        self.maxLocs = np.zeros((self.channel, self.y_rowcol, self.y_rowcol, 2))
+
+        self.channel = x.shape[1]
+        self.maxLocs = np.zeros((self.batch, self.channel, self.y_rowcol, self.y_rowcol, 2))
         # TODO: workaround
-        self.Y = np.zeros((self.channel, self.y_rowcol, self.y_rowcol))
+        self.Y = np.zeros((self.batch, self.channel, self.y_rowcol, self.y_rowcol))
 
         for c in range(self.channel):
             for yi in range(0, self.y_rowcol, self.strides[0]):
                 for yj in range(0, self.y_rowcol, self.strides[1]):
-                    tmp = np.argmax(self.X[c, yi:yi+self.kernel_size, yj:yj+self.kernel_size])
-                    self.maxLocs[c, yi, yj, :] = [tmp%self.kernel_size, tmp/self.kernel_size]
-                    self.Y[c, yi, yj] = np.max(self.X[c, yi:yi+self.kernel_size, yj:yj+self.kernel_size])
+                    tmp = self.X[:, c, yi:yi+self.kernel_size, yj:yj+self.kernel_size].reshape(self.batch, -1).argmax(1)
+                    self.maxLocs[:, c, yi, yj, 0] = (tmp/self.kernel_size).astype(int)
+                    self.maxLocs[:, c, yi, yj, 1] = tmp%self.kernel_size
+                    self.Y[:, c, yi, yj] = np.max(self.X[:, c, yi:yi+self.kernel_size, yj:yj+self.kernel_size], axis=(1,2))
         return self.Y
 
     def backward(self, err_delta):
-        if len(err_delta.shape) != 3:
-            err_delta = err_delta.reshpae((self.channel, self.y_rowcol, self.y_rowcol))
         self.E = err_delta
-        err_delta = np.zeros((self.channel, self.x_rowcol, self.x_rowcol))
+        err_delta = np.zeros((self.batch, self.channel, self.x_rowcol, self.x_rowcol))
 
-        for c in range(self.channel):
-            for yi in range(self.y_rowcol):
-                for yj in range(self.y_rowcol):
-                    err_delta[c, yi+self.maxLocs[c,yi,yj,0], yj+self.maxLocs[c,yi,yj,1]] += self.E[c, yi, yj]
+        for b in range(self.batch):
+            for c in range(self.channel):
+                for yi in range(self.y_rowcol):
+                    for yj in range(self.y_rowcol):
+                        # TODO : really bad way
+                        err_delta[b,c,yi+self.maxLocs[b,c,yi,yj,0], yj+self.maxLocs[b,c,yi,yj,1]] += self.E[b,c,yi,yj]
 
         return err_delta
 
@@ -123,10 +124,9 @@ class FullyConnect(Layer):
 
     def forward(self, x):
         # for 2D data (like image)
-        # batch == 0 is workaround
-        if len(x.shape) > 1 and self.batch == 1:
+        if len(x.shape) > 1:
             self.original_shape = x.shape
-            x = np.ravel(x)
+            x = x.reshape(self.original_shape[0], reduce(lambda x,y:x*y, self.original_shape[1:]))
         self.X = x
         self.Y = x.dot(self.W) + self.bias
         return self.Y
