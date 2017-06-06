@@ -38,20 +38,17 @@ class Network:
         self.Y = None
         self.last_units = units
 
-    def predict(self, X):
-        if len(X.shape) > 1 and self.batch:
-            ans = np.zeros((X.shape[0], self.last_units))
-            for i in range(0, X.shape[0], self.batch):
-                tmp = X[i:i+self.batch, :]
-                for layer in self.layers:
-                    tmp = layer.forward(tmp)
-                ans[i:i+self.batch, :] = tmp
-            return ans
-        else:
-            self.Y = X
+    def predict(self, X, batch=1):
+        ans = np.zeros((X.shape[0], self.last_units))
+        for i in range(0, X.shape[0], self.batch):
+            tmp = X[i:i+self.batch, :]
             for layer in self.layers:
-                self.Y = layer.forward(self.Y)
-        return self.Y
+                tmpbatch = layer.batch
+                layer.batch = batch
+                tmp = layer.forward(tmp)
+                layer.batch = tmpbatch
+            ans[i:i+self.batch, :] = tmp
+        return ans
 
     def train(self, X, label, loss=MSE()):
         self.Y = X
