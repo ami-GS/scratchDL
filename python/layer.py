@@ -63,16 +63,12 @@ class Conv2D(Layer):
                         err_delta[b, :, yi:yi+self.kernel_size, yj:yj+self.kernel_size],
                         np.sum((self.E[b,:,yi,yj] * self.filters.T).T, axis=0))
 
-        # TODO : suspicious
         for yi in range(0, self.y_rowcol, self.strides[0]):
             for yj in range(0, self.y_rowcol, self.strides[1]):
-                self.filters -= self.optimizer(
-                    self.learning_rate *
-                    np.sum(np.sum(
-                            np.outer(self.E[:,:,yi,yj],
-                                     self.X[:,:,yi:yi+self.kernel_size, yj:yj+self.kernel_size]),
-                            axis=0).reshape((self.batch, self.channel, self.kernel_size, self.kernel_size)),
-                        axis=0))
+                self.filters -= np.sum(np.sum(
+                    np.einsum("bcij,bf->bcfij", self.X[:,:,yi:yi+self.kernel_size,yj:yj+self.kernel_size], self.E[:,:,yi,yj]),
+                    axis=1), axis=0)/self.batch #sum channel, then batch
+
         return err_delta
 
 class MaxPooling2D(Layer):
