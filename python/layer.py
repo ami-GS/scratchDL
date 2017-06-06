@@ -137,7 +137,7 @@ class FullyConnect(Layer):
 
         # updates
         if self.batch > 1:
-            np.subtract(self.W, self.optimizer(np.sum(np.einsum("bi,bj->bij", self.X, self.learning_rate*self.E), axis=0)), self.W)
+            np.subtract(self.W, self.optimizer(np.sum(np.einsum("bi,bj->bij", self.X, self.learning_rate*self.E), axis=0))/self.batch, self.W)
             # TODO : sharing bias to all batch
             self.bias -= np.sum(self.learning_rate * self.E)
         else:
