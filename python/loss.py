@@ -24,3 +24,15 @@ class MSE(Loss):
 
     def partial_derivative(self, X, label):
         return - (label - X)
+
+
+class CrossEntropy(Loss):
+    def __init__(self):
+        super(CrossEntropy, self).__init__()
+
+    def calc(self, X, label, batch=1):
+        print X
+        return -np.sum(label * np.log(X+10e-20) + (1-label)*np.log(1-X), axis=0)
+
+    def partial_derivative(self, X, label):
+        return (X-label)/(X * (1 - X))
