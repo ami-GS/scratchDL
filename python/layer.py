@@ -83,7 +83,7 @@ class MaxPooling2D(Layer):
         self.y_rowcol = self.x_rowcol - self.kernel_size+1
 
         self.channel = x.shape[1]
-        self.maxLocs = np.zeros((self.batch, self.channel, self.y_rowcol, self.y_rowcol, 2))
+        self.maxLocs = np.zeros((self.batch, self.channel, self.y_rowcol, self.y_rowcol, 2), dtype=int)
         # TODO: workaround
         self.Y = np.zeros((self.batch, self.channel, self.y_rowcol, self.y_rowcol))
 
