@@ -132,19 +132,8 @@ class FullyConnect(Layer):
         err_delta = self.E.dot(self.W.T)
 
         # updates
-        if self.batch > 1:
-            np.subtract(self.W, self.optimizer(np.sum(np.einsum("bi,bj->bij", self.X, self.learning_rate*self.E), axis=0))/self.batch, self.W)
-            # TODO : sharing bias to all batch
-            self.bias -= np.sum(self.learning_rate * self.E)
-        else:
-            np.subtract(self.W, self.optimizer(np.outer(self.X, self.learning_rate * self.E)), self.W)
-            if len(self.E) >= 2:
-                self.bias -= np.sum(self.learning_rate * self.E, axis=1)
-                #self.bias -= self.optimizer(np.sum(self.learning_rate * self.E, axis=1))
-            else:
-                # TODO : just workaround for shape = (1)
-                self.bias -= np.sum(self.learning_rate * self.E)
-                #self.bias -= self.optimizer(np.sum(self.learning_rate * self.E))
+        np.subtract(self.W, self.optimizer(np.sum(np.einsum("bi,bj->bij", self.X, self.learning_rate*self.E), axis=0))/self.batch, self.W)
+        self.bias -= np.sum(self.learning_rate * self.E)
 
         if self.original_shape:
             err_delta = err_delta.reshape(self.original_shape)

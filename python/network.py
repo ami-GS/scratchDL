@@ -25,14 +25,9 @@ class Network:
                     tmp = layer.input_shape - layer.kernel_size + 1
                     layer.Y = np.zeros((1, tmp, tmp))
                     layer.units = tmp**2
-            if self.batch == 1:
-                layer.X = np.zeros(layer.input_shape)
-                layer.Y = np.zeros(layer.units)
-                layer.E = np.zeros(layer.units)
-            else:
-                layer.X = np.zeros((batch, layer.input_shape))
-                layer.Y = np.zeros((batch, layer.units))
-                layer.E = np.zeros((batch, layer.units))
+            layer.X = np.zeros((batch, layer.input_shape))
+            layer.Y = np.zeros((batch, layer.units))
+            layer.E = np.zeros((batch, layer.units))
             units = layer.units
         # current value
         self.Y = None
