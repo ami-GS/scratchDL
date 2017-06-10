@@ -44,12 +44,9 @@ class Conv2D(Layer):
         self.X = np.reshape(self.X, (self.batch, self.channel, self.x_rowcol, self.x_rowcol))
         self.Y = np.zeros((self.batch, self.filterNum, self.y_rowcol, self.y_rowcol))
 
-        for f in range(self.filterNum):
-            for c in range(self.channel):
-                for yi in range(0, self.y_rowcol, self.strides[0]):
-                    for yj in range(0, self.y_rowcol, self.strides[1]):
-                        self.Y[:,f,yi,yj] = np.sum(np.multiply(self.X[:,c,yi:yi+self.kernel_size,yj:yj+self.kernel_size], self.filters[f,:,:]), axis=(1,2))
-
+        for yi in range(0, self.y_rowcol, self.strides[0]):
+            for yj in range(0, self.y_rowcol, self.strides[1]):
+                self.Y[:,:,yi,yj] = np.sum(np.einsum("bcij,fij->bcfij", self.X[:,:,yi:yi+self.kernel_size,yj:yj+self.kernel_size], self.filters[:,:,:]), axis=(1,3,4))
         return self.Y
 
     def backward(self, err_delta):
