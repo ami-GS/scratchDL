@@ -23,7 +23,7 @@ if __name__ == "__main__":
         dataset[dataNum/last_units*i:dataNum/last_units*(i+1),:,:] = np.random.uniform(i-1, i, (dataNum/last_units,channel,input_shape))
         label[dataNum/last_units*i:dataNum/last_units*(i+1),i] = 1
     net = Network(
-        [Conv2D(4, 1, 3, input_shape=input_shape), # 1*12*12  -> 4*10*10
+        [Conv2D(4, 3, input_shape=input_shape), # 1*12*12  -> 4*10*10
          ReLU(),
          MaxPooling2D(2), # 10*10*4 -> 9*9*4
          FullyConnect(units=last_units, input_shape=324),

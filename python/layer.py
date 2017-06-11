@@ -19,12 +19,11 @@ class Layer(object):
 
 
 class Conv2D(Layer):
-    def __init__(self, filters, channel, kernel_size, strides=(1,1), input_shape = None):
+    def __init__(self, filters, kernel_size, strides=(1,1), input_shape = None):
         super(Conv2D, self).__init__(input_shape, None)
         self.filterNum = filters
         self.kernel_size = kernel_size
         self.filters = np.random.uniform(-1, 1, (filters, kernel_size, kernel_size))
-        self.channel = 1 # WIP
         self.strides = strides
         # size is valid
         self.units = int(np.sqrt(self.input_shape)) - self.kernel_size + 1
