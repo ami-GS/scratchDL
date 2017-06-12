@@ -51,13 +51,12 @@ class Conv2D(Layer):
     def backward(self, err_delta):
         self.E = err_delta
         err_delta = np.zeros((self.batch, self.channel, self.x_rowcol, self.x_rowcol))
-        # TODO : temporally using batch
-        for b in range(self.batch):
-            for yi in range(self.y_rowcol):
-                for yj in range(self.y_rowcol):
-                    err_delta[b, :, yi:yi+self.kernel_size, yj:yj+self.kernel_size] = np.add(
-                        err_delta[b, :, yi:yi+self.kernel_size, yj:yj+self.kernel_size],
-                        np.sum((self.E[b,:,yi,yj] * self.filters.T).T, axis=0))
+        template_shape = (self.batch, self.channel, self.kernel_size, self.kernel_size)
+        for yi in range(self.y_rowcol):
+            for yj in range(self.y_rowcol):
+                err_delta[:, :, yi:yi+self.kernel_size, yj:yj+self.kernel_size] = \
+                        np.reshape(np.squeeze(err_delta[:, :, yi:yi+self.kernel_size, yj:yj+self.kernel_size]) + \
+                        np.sum(np.einsum("bf,fij->bfij", self.E[:,:,yi,yj], self.filters), axis=1), template_shape)
 
         for yi in range(0, self.y_rowcol, self.strides[0]):
             for yj in range(0, self.y_rowcol, self.strides[1]):
