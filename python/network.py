@@ -34,6 +34,11 @@ class Network:
         self.last_units = units
 
     def predict(self, X, batch=1):
+        prevLayer = None
+        for l in self.layers:
+            l.configure(X.shape, prevLayer)
+            prevLayer = l
+
         ans = np.zeros((X.shape[0], self.last_units))
         for i in range(0, X.shape[0], self.batch):
             tmp = X[i:i+self.batch, :]
@@ -46,6 +51,11 @@ class Network:
         return ans
 
     def train(self, X, label, loss=MSE()):
+        prevLayer = None
+        for l in self.layers:
+            l.configure(X.shape, prevLayer)
+            prevLayer = l
+
         self.Y = X
         for layer in self.layers:
             self.Y = layer.forward(self.Y)

@@ -11,6 +11,9 @@ class Layer(object):
         # error
         self.E = np.zeros(units)
 
+    def configure(self, shape, prevLayer):
+        self.prevLayer = prevLayer
+
     def forward(self, x):
         pass
 
@@ -25,24 +28,29 @@ class Conv2D(Layer):
         self.kernel_size = kernel_size
         self.filters = np.random.uniform(-1, 1, (filters, kernel_size, kernel_size))
         self.strides = strides
-        # size is valid
-        self.units = int(np.sqrt(self.input_shape)) - self.kernel_size + 1
-        self.units *= self.units
         if input_shape:
+            # size is valid
+            self.units = int(np.sqrt(self.input_shape)) - self.kernel_size + 1
+            self.units *= self.units
             self.x_rowcol = int(np.sqrt(self.input_shape))
             self.y_rowcol = self.x_rowcol - self.kernel_size+1
 
-    def forward(self, x):
-        self.X = x
-        self.channel = x.shape[1]
-
-        if not self.x_rowcol:
-            self.x_rowcol = int(np.sqrt(self.input_shape))
-            self.y_rowcol = self.x_rowcol - self.kernel_size+1
-
-        self.X = np.reshape(self.X, (self.batch, self.channel, self.x_rowcol, self.x_rowcol))
+    def configure(self, data_shape, prevLayer=None):
+        self.prevLayer = prevLayer
+        self.channel = data_shape[1]
+        self.batch = data_shape[0]
+        if prevLayer:
+            self.units = int(np.sqrt(self.input_shape)) - self.kernel_size + 1
+            self.units *= self.units
+            self.input_shape = prevLayer.units
+        self.x_rowcol = int(np.sqrt(self.input_shape))
+        self.y_rowcol = self.x_rowcol - self.kernel_size+1
+        self.X = np.zeros((self.batch, self.channel, self.x_rowcol, self.x_rowcol))
+        self.E = np.zeros((self.batch, self.channel, self.y_rowcol, self.y_rowcol))
         self.Y = np.zeros((self.batch, self.filterNum, self.y_rowcol, self.y_rowcol))
 
+    def forward(self, x):
+        self.X[:] = np.reshape(x, (self.batch, self.channel, self.x_rowcol, self.x_rowcol))
         for yi in range(0, self.y_rowcol, self.strides[0]):
             for yj in range(0, self.y_rowcol, self.strides[1]):
                 self.Y[:,:,yi,yj] = np.sum(np.einsum("bcij,fij->bcfij", self.X[:,:,yi:yi+self.kernel_size,yj:yj+self.kernel_size], self.filters[:,:,:]), axis=(1,3,4))
@@ -72,16 +80,19 @@ class MaxPooling2D(Layer):
         self.kernel_size = kernel_size
         self.strides = strides
 
-    def forward(self, x):
-        self.X = x
-        self.x_rowcol = int(np.sqrt(self.input_shape))
+    def configure(self, data_shape, prevLayer = None):
+        self.prevLayer = prevLayer
+        self.x_rowcol = int(np.sqrt(prevLayer.input_shape))
         self.y_rowcol = self.x_rowcol - self.kernel_size+1
-
-        self.channel = x.shape[1]
+        self.channel = prevLayer.prevLayer.filterNum
+        self.batch = data_shape[0]
         self.maxLocs = np.zeros((self.batch, self.channel, self.y_rowcol, self.y_rowcol, 2), dtype=int)
-        # TODO: workaround
+        self.X = np.zeros((self.batch, self.channel, self.x_rowcol, self.x_rowcol))
+        self.E = np.zeros((self.batch, self.channel, self.y_rowcol, self.y_rowcol))
         self.Y = np.zeros((self.batch, self.channel, self.y_rowcol, self.y_rowcol))
 
+    def forward(self, x):
+        self.X[:] = x
         for c in range(self.channel):
             for yi in range(0, self.y_rowcol, self.strides[0]):
                 for yj in range(0, self.y_rowcol, self.strides[1]):
@@ -92,7 +103,7 @@ class MaxPooling2D(Layer):
         return self.Y
 
     def backward(self, err_delta):
-        self.E = err_delta
+        self.E[:] = err_delta
         err_delta = np.zeros((self.batch, self.channel, self.x_rowcol, self.x_rowcol))
 
         for b in range(self.batch):
@@ -106,24 +117,34 @@ class MaxPooling2D(Layer):
 
 
 class FullyConnect(Layer):
-    def __init__(self, units, input_shape):
+    def __init__(self, units, input_shape=0):
         super(FullyConnect, self).__init__(input_shape, units)
         self.W = np.random.uniform(-1, 1, (input_shape, units))
         # TODO : sharing bias to all batch
         self.bias = np.random.uniform(-1, 1, 1)
         self.original_shape = None
 
+    def configure(self, data_shape, prevLayer = None):
+        self.prevLayer = prevLayer
+        self.batch = data_shape[0]
+        if isinstance(prevLayer, MaxPooling2D):
+            self.input_shape = prevLayer.channel * prevLayer.y_rowcol * prevLayer.y_rowcol
+        self.X = np.zeros((self.batch, self.input_shape))
+        self.E = np.zeros((self.batch, self.units))
+        self.Y = np.zeros((self.batch, self.units))
+
     def forward(self, x):
         # for 2D data (like image)
         if len(x.shape) > 1:
             self.original_shape = x.shape
             x = x.reshape(self.original_shape[0], reduce(lambda x,y:x*y, self.original_shape[1:]))
-        self.X = x
+
+        self.X[:] = x
         self.Y = x.dot(self.W) + self.bias
         return self.Y
 
     def backward(self, err_delta):
-        self.E = err_delta
+        self.E[:] = err_delta
         err_delta = self.E.dot(self.W.T)
 
         # updates
