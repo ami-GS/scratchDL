@@ -82,7 +82,9 @@ class MaxPooling2D(Layer):
 
     def configure(self, data_shape, prevLayer = None):
         self.prevLayer = prevLayer
-        self.x_rowcol = int(np.sqrt(prevLayer.input_shape))
+        # TODO : not good,
+        self.x_rowcol = prevLayer.prevLayer.y_rowcol
+        self.input_shape = self.x_rowcol**2
         self.y_rowcol = self.x_rowcol - self.kernel_size+1
         self.channel = prevLayer.prevLayer.filterNum
         self.batch = data_shape[0]

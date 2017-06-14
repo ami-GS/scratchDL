@@ -25,12 +25,8 @@ class Network:
                     tmp = layer.input_shape - layer.kernel_size + 1
                     layer.Y = np.zeros((1, tmp, tmp))
                     layer.units = tmp**2
-            layer.X = np.zeros((batch, layer.input_shape))
-            layer.Y = np.zeros((batch, layer.units))
-            layer.E = np.zeros((batch, layer.units))
             units = layer.units
         # current value
-        self.Y = None
         self.last_units = units
 
     def predict(self, X, batch=1):
