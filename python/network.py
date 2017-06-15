@@ -11,23 +11,16 @@ class Network:
         self.batch = batch
         self.learning_rate = learning_rate
         self.input_shape = layers[0].input_shape
-        units = self.layers[0].units
+
         for i in range(len(self.layers)):
             layer = self.layers[i]
             layer.learning_rate = learning_rate
             layer.batch = batch
             layer.optimizer = copy.deepcopy(optimizer)
-            if i >= 1:
-                layer.input_shape = units
-                if isinstance(layer, Activation):
-                    layer.units = units
-                elif isinstance(layer, MaxPooling2D) or isinstance(layer, Conv2D):
-                    tmp = layer.input_shape - layer.kernel_size + 1
-                    layer.Y = np.zeros((1, tmp, tmp))
-                    layer.units = tmp**2
-            units = layer.units
-        # current value
-        self.last_units = units
+        self.last_units = layers[-1].units
+        if isinstance(layers[-1], Activation):
+            self.last_units = layers[-2].units
+
 
     def predict(self, X, batch=1):
         prevLayer = None

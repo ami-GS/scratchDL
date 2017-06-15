@@ -46,7 +46,8 @@ class Conv2D(Layer):
         self.x_rowcol = int(np.sqrt(self.input_shape))
         self.y_rowcol = self.x_rowcol - self.kernel_size+1
         self.X = np.zeros((self.batch, self.channel, self.x_rowcol, self.x_rowcol))
-        self.E = np.zeros((self.batch, self.channel, self.y_rowcol, self.y_rowcol))
+        self.E = np.zeros((self.batch, self.filterNum, self.y_rowcol, self.y_rowcol))
+        self.err_delta = np.zeros((self.batch, self.channel, self.x_rowcol, self.x_rowcol))
         self.Y = np.zeros((self.batch, self.filterNum, self.y_rowcol, self.y_rowcol))
 
     def forward(self, x):
@@ -57,13 +58,12 @@ class Conv2D(Layer):
         return self.Y
 
     def backward(self, err_delta):
-        self.E = err_delta
-        err_delta = np.zeros((self.batch, self.channel, self.x_rowcol, self.x_rowcol))
+        self.E[:] = err_delta
         template_shape = (self.batch, self.channel, self.kernel_size, self.kernel_size)
         for yi in range(self.y_rowcol):
             for yj in range(self.y_rowcol):
-                err_delta[:, :, yi:yi+self.kernel_size, yj:yj+self.kernel_size] = \
-                        np.reshape(np.squeeze(err_delta[:, :, yi:yi+self.kernel_size, yj:yj+self.kernel_size]) + \
+                self.err_delta[:, :, yi:yi+self.kernel_size, yj:yj+self.kernel_size] = \
+                        np.reshape(np.squeeze(self.err_delta[:, :, yi:yi+self.kernel_size, yj:yj+self.kernel_size]) + \
                         np.sum(np.einsum("bf,fij->bfij", self.E[:,:,yi,yj], self.filters), axis=1), template_shape)
 
         for yi in range(0, self.y_rowcol, self.strides[0]):
@@ -72,7 +72,7 @@ class Conv2D(Layer):
                     np.einsum("bcij,bf->bcfij", self.X[:,:,yi:yi+self.kernel_size,yj:yj+self.kernel_size], self.E[:,:,yi,yj]),
                     axis=1), axis=0)/self.batch #sum channel, then batch
 
-        return err_delta
+        return self.err_delta
 
 class MaxPooling2D(Layer):
     def __init__(self, kernel_size, strides=(1,1)):
@@ -91,6 +91,7 @@ class MaxPooling2D(Layer):
         self.maxLocs = np.zeros((self.batch, self.channel, self.y_rowcol, self.y_rowcol, 2), dtype=int)
         self.X = np.zeros((self.batch, self.channel, self.x_rowcol, self.x_rowcol))
         self.E = np.zeros((self.batch, self.channel, self.y_rowcol, self.y_rowcol))
+        self.err_delta = np.zeros((self.batch, self.channel, self.x_rowcol, self.x_rowcol))
         self.Y = np.zeros((self.batch, self.channel, self.y_rowcol, self.y_rowcol))
 
     def forward(self, x):
@@ -106,16 +107,15 @@ class MaxPooling2D(Layer):
 
     def backward(self, err_delta):
         self.E[:] = err_delta
-        err_delta = np.zeros((self.batch, self.channel, self.x_rowcol, self.x_rowcol))
 
         for b in range(self.batch):
             for c in range(self.channel):
                 for yi in range(self.y_rowcol):
                     for yj in range(self.y_rowcol):
                         # TODO : really bad way
-                        err_delta[b,c,yi+self.maxLocs[b,c,yi,yj,0], yj+self.maxLocs[b,c,yi,yj,1]] += self.E[b,c,yi,yj]
+                        self.err_delta[b,c,yi+self.maxLocs[b,c,yi,yj,0], yj+self.maxLocs[b,c,yi,yj,1]] += self.E[b,c,yi,yj]
 
-        return err_delta
+        return self.err_delta
 
 
 class FullyConnect(Layer):
