@@ -2,11 +2,10 @@
 Deep learning implementation
 
 
-####TODO
+#### TODO
 
 - python
   - optimizer (partially done)
   - recurrent
-  - batch for Conv
 - C++
   - after python
