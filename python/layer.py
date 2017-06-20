@@ -1,4 +1,5 @@
 import numpy as np
+import math
 
 class Layer(object):
     def __init__(self, input_shape = None, units = None):
@@ -22,14 +23,15 @@ class Layer(object):
 
 
 class Conv2D(Layer):
-    def __init__(self, filters, kernel_size, strides=(1,1), input_shape = None):
+    def __init__(self, filters, kernel_size, strides=(1,1), input_shape = None, padding = 0):
         super(Conv2D, self).__init__(input_shape, None)
         self.filterNum = filters
         self.kernel_size = kernel_size
+        self.padding = padding
         self.filters = np.random.uniform(-1, 1, (filters, kernel_size**2))
         self.strides = strides
         if input_shape:
-            # size is valid
+            self.input_shape = (int(math.sqrt(input_shape))+self.padding)**2
             self.units = int(np.sqrt(self.input_shape)) - self.kernel_size + 1
             self.units *= self.units
             self.x_rowcol = int(np.sqrt(self.input_shape))
@@ -42,18 +44,18 @@ class Conv2D(Layer):
         if prevLayer:
             self.units = int(np.sqrt(self.input_shape)) - self.kernel_size + 1
             self.units *= self.units
-            self.input_shape = prevLayer.units
+            self.input_shape = (int(math.sqrt(prevLayer.units)) + self.padding)**2
         self.x_rowcol = int(np.sqrt(self.input_shape))
-        self.y_rowcol = self.x_rowcol - self.kernel_size+1
+        self.y_rowcol = (self.x_rowcol + 2 * self.padding - self.kernel_size)/self.strides[0] + 1
         self.X = np.zeros((self.batch, self.channel, self.kernel_size**2, self.y_rowcol**2))
         self.E = np.zeros((self.batch, self.filterNum, self.y_rowcol**2))
         self.err_delta = np.zeros((self.batch, self.channel, self.x_rowcol, self.x_rowcol))
         self.Y = np.zeros((self.batch, self.filterNum, self.y_rowcol**2))
 
     def forward(self, x):
-        x = x.reshape(self.batch, self.channel, self.x_rowcol, self.x_rowcol)
-        for i in range(self.y_rowcol):
-            for j in range(self.y_rowcol):
+        x = x.reshape(self.batch, self.channel, self.x_rowcol-self.padding, self.x_rowcol-self.padding)
+        if self.padding:
+            x = np.lib.pad(x, (1,1), 'constant', constant_values=(0,0))
                 self.X[:, :, :, self.y_rowcol*i+j%self.y_rowcol] = \
                 x[:, :, i:i+self.kernel_size, j:j+self.kernel_size].reshape(self.batch, self.channel, self.kernel_size**2)
 
