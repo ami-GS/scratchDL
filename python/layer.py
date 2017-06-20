@@ -72,9 +72,13 @@ class Conv2D(Layer):
 
         for yi in range(self.y_rowcol):
             for yj in range(self.y_rowcol):
-                self.err_delta[:, :, yi:yi+self.kernel_size, yj:yj+self.kernel_size] += \
-                        np.sum(np.einsum("bf,fk->bfk", self.E[:,:,yi*self.y_rowcol + yj%self.y_rowcol], self.filters), axis=1)\
-                          .reshape(self.batch, self.channel, self.kernel_size, self.kernel_size)
+                # not good for vector processing
+                tmp = np.einsum("bf,fk->bfk", self.E[:,:,yi*self.y_rowcol + yj%self.y_rowcol], self.filters)
+                for f in range(self.filterNum):
+                    yyi = yi * self.strides[0]
+                    yyj = yj * self.strides[1]
+                    self.err_delta[:, :, yyi:yyi+self.kernel_size, yyj:yyj+self.kernel_size] += \
+                        tmp[:,f,:].reshape(self.batch, 1, self.kernel_size, self.kernel_size)
 
         tmp = np.zeros(self.filters.shape)
         for b in range(self.batch):
