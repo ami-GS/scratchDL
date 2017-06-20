@@ -56,6 +56,9 @@ class Conv2D(Layer):
         x = x.reshape(self.batch, self.channel, self.x_rowcol-self.padding, self.x_rowcol-self.padding)
         if self.padding:
             x = np.lib.pad(x, (1,1), 'constant', constant_values=(0,0))
+
+        for i in range(0, self.y_rowcol, self.strides[0]):
+            for j in range(0, self.y_rowcol, self.strides[1]):
                 self.X[:, :, :, self.y_rowcol*i+j%self.y_rowcol] = \
                 x[:, :, i:i+self.kernel_size, j:j+self.kernel_size].reshape(self.batch, self.channel, self.kernel_size**2)
 
@@ -120,7 +123,9 @@ class MaxPooling2D(Layer):
                 for yi in range(self.y_rowcol):
                     for yj in range(self.y_rowcol):
                         # TODO : really bad way
-                        self.err_delta[b,c,yi+self.maxLocs[b,c,yi,yj,0], yj+self.maxLocs[b,c,yi,yj,1]] += self.E[b,c,yi,yj]
+                        yyi = yi * self.strides[0]
+                        yyj = yj * self.strides[1]
+                        self.err_delta[b,c,yyi+self.maxLocs[b,c,yi,yj,0], yyj+self.maxLocs[b,c,yi,yj,1]] += self.E[b,c,yi,yj]
 
         return self.err_delta
 
