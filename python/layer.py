@@ -102,26 +102,27 @@ class MaxPooling2D(Layer):
         self.y_rowcol = self.x_rowcol - self.kernel_size+1
         self.channel = prevLayer.prevLayer.filterNum
         self.batch = data_shape[0]
-        self.maxLocs = np.zeros((self.batch, self.channel, self.y_rowcol, self.y_rowcol, 2), dtype=int)
-        self.X = np.zeros((self.batch, self.channel, self.x_rowcol, self.x_rowcol))
+        self.maxLocs = np.zeros((self.batch, self.channel, self.y_rowcol**2), dtype=int)
+        self.X = np.zeros((self.batch, self.channel, self.kernel_size**2, self.y_rowcol**2))
         self.E = np.zeros((self.batch, self.channel, self.y_rowcol, self.y_rowcol))
         self.err_delta = np.zeros((self.batch, self.channel, self.x_rowcol, self.x_rowcol))
-        self.Y = np.zeros((self.batch, self.channel, self.y_rowcol, self.y_rowcol))
+        self.Y = np.zeros((self.batch, self.channel, self.y_rowcol**2))
 
     def forward(self, x):
-        self.X[:] = x
-        for c in range(self.channel):
-            for yi in range(0, self.y_rowcol, self.strides[0]):
-                for yj in range(0, self.y_rowcol, self.strides[1]):
-                    tmp = self.X[:, c, yi:yi+self.kernel_size, yj:yj+self.kernel_size].reshape(self.batch, -1).argmax(1)
-                    self.maxLocs[:, c, yi, yj, 0] = (tmp/self.kernel_size).astype(int)
-                    self.maxLocs[:, c, yi, yj, 1] = tmp%self.kernel_size
-                    self.Y[:, c, yi, yj] = np.max(self.X[:, c, yi:yi+self.kernel_size, yj:yj+self.kernel_size], axis=(1,2))
-        return self.Y
+        for i in range(0, self.y_rowcol, self.strides[0]):
+            for j in range(0, self.y_rowcol, self.strides[1]):
+                self.X[:, :, :, self.y_rowcol*i+j%self.y_rowcol] = \
+                    x[:, :, i:i+self.kernel_size, j:j+self.kernel_size].reshape(self.batch, self.channel, self.kernel_size**2)
+
+        self.maxLocs[:] = self.X.argmax(axis=2)
+        self.Y = self.X.max(axis=2)
+        return self.Y.reshape(self.batch, self.channel, self.y_rowcol, self.y_rowcol)
 
     def backward(self, err_delta):
         self.E[:] = err_delta
 
+        # TODO : can be improved more
+        maxLocs = [self.maxLocs%self.y_rowcol, self.maxLocs/self.y_rowcol]
         for b in range(self.batch):
             for c in range(self.channel):
                 for yi in range(self.y_rowcol):
@@ -129,8 +130,7 @@ class MaxPooling2D(Layer):
                         # TODO : really bad way
                         yyi = yi * self.strides[0]
                         yyj = yj * self.strides[1]
-                        self.err_delta[b,c,yyi+self.maxLocs[b,c,yi,yj,0], yyj+self.maxLocs[b,c,yi,yj,1]] += self.E[b,c,yi,yj]
-
+                        self.err_delta[b,c,maxLocs[0][b,c,yi*self.y_rowcol+yj%self.y_rowcol], maxLocs[1][b,c,yi*self.y_rowcol+yj%self.y_rowcol]] += self.E[b,c,yi,yj]
         return self.err_delta
 
 
