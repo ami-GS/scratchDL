@@ -104,7 +104,7 @@ class MaxPooling2D(Layer):
         self.batch = data_shape[0]
         self.maxLocs = np.zeros((self.batch, self.channel, self.y_rowcol**2), dtype=int)
         self.X = np.zeros((self.batch, self.channel, self.kernel_size**2, self.y_rowcol**2))
-        self.E = np.zeros((self.batch, self.channel, self.y_rowcol, self.y_rowcol))
+        self.E = np.zeros((self.batch, self.channel, self.y_rowcol**2))
         self.err_delta = np.zeros((self.batch, self.channel, self.x_rowcol, self.x_rowcol))
         self.Y = np.zeros((self.batch, self.channel, self.y_rowcol**2))
 
@@ -112,25 +112,24 @@ class MaxPooling2D(Layer):
         for i in range(0, self.y_rowcol, self.strides[0]):
             for j in range(0, self.y_rowcol, self.strides[1]):
                 self.X[:, :, :, self.y_rowcol*i+j%self.y_rowcol] = \
-                    x[:, :, i:i+self.kernel_size, j:j+self.kernel_size].reshape(self.batch, self.channel, self.kernel_size**2)
+                x[:, :, i:i+self.kernel_size, j:j+self.kernel_size].reshape(self.batch, self.channel, self.kernel_size**2)
 
         self.maxLocs[:] = self.X.argmax(axis=2)
         self.Y = self.X.max(axis=2)
         return self.Y.reshape(self.batch, self.channel, self.y_rowcol, self.y_rowcol)
 
     def backward(self, err_delta):
-        self.E[:] = err_delta
+        self.E[:] = err_delta.reshape(self.batch, self.channel, self.y_rowcol**2)
 
-        # TODO : can be improved more
-        maxLocs = [self.maxLocs%self.y_rowcol, self.maxLocs/self.y_rowcol]
         for b in range(self.batch):
             for c in range(self.channel):
-                for yi in range(self.y_rowcol):
-                    for yj in range(self.y_rowcol):
-                        # TODO : really bad way
-                        yyi = yi * self.strides[0]
-                        yyj = yj * self.strides[1]
-                        self.err_delta[b,c,maxLocs[0][b,c,yi*self.y_rowcol+yj%self.y_rowcol], maxLocs[1][b,c,yi*self.y_rowcol+yj%self.y_rowcol]] += self.E[b,c,yi,yj]
+                for y in range(self.y_rowcol**2):
+                    # TODO : really bad way
+                    loc = self.maxLocs[b,c,y]
+                    locy = loc / self.kernel_size + (y / self.y_rowcol)
+                    locx = loc % self.kernel_size + (y % self.y_rowcol)
+                    self.err_delta[b,c,locx,locy] += self.E[b,c,y]
+
         return self.err_delta
 
 
