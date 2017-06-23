@@ -42,10 +42,11 @@ class Network:
         return ans
 
     def train(self, X, label, loss=MSE()):
-        prevLayer = None
-        for l in self.layers:
-            l.configure(X.shape, prevLayer)
-            prevLayer = l
+        if self.configured == False:
+            prevLayer = None
+            for l in self.layers:
+                l.configure(X.shape, prevLayer)
+                prevLayer = l
 
         self.Y = X
         for layer in self.layers:

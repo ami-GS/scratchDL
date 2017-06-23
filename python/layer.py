@@ -5,12 +5,6 @@ class Layer(object):
     def __init__(self, input_shape = None, units = None):
         self.input_shape = input_shape
         self.units = units
-        # input
-        self.X = np.zeros(input_shape)
-        # calculated value
-        self.Y = np.zeros(units)
-        # error
-        self.E = np.zeros(units)
 
     def configure(self, shape, prevLayer):
         self.prevLayer = prevLayer
