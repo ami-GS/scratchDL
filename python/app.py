@@ -33,7 +33,9 @@ if __name__ == "__main__":
         # FullyConnect(units=last_units, input_shape=144)],
         learning_rate = learning_rate,
         optimizer=Momentum(0.9),
-        batch=batchSize)
+        batch=batchSize,
+        dtype=np.float16
+    )
 
     err_prev = 0
     for e in range(epoch):

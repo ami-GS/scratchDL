@@ -6,21 +6,23 @@ from loss import MSE
 import copy
 
 class Network:
-    def __init__(self, layers=None, batch=1, learning_rate=0.02, optimizer=PassThrough()):
+    def __init__(self, layers=None, batch=1, learning_rate=0.02, optimizer=PassThrough(), dtype=np.float32):
         self.layers = layers
         self.batch = batch
         self.learning_rate = learning_rate
         self.input_shape = layers[0].input_shape
+        self.configured = False
+        self.dtype = dtype
 
         for i in range(len(self.layers)):
             layer = self.layers[i]
             layer.learning_rate = learning_rate
             layer.batch = batch
+            layer.dtype = dtype
             layer.optimizer = copy.deepcopy(optimizer)
         self.last_units = layers[-1].units
         if isinstance(layers[-1], Activation):
             self.last_units = layers[-2].units
-
 
     def predict(self, X, batch=1):
         prevLayer = None

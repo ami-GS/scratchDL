@@ -23,12 +23,13 @@ class Layer(object):
 
 
 class Conv2D(Layer):
-    def __init__(self, filters, kernel_size, strides=(1,1), input_shape = None, padding = 0):
+    def __init__(self, filters, kernel_size, strides=(1,1), input_shape = None, padding = 0, dtype=np.float32):
         super(Conv2D, self).__init__(input_shape, None)
         self.filterNum = filters
         self.kernel_size = kernel_size
         self.padding = padding
-        self.filters = np.random.uniform(-1, 1, (filters, kernel_size**2))
+        self.filters = np.random.uniform(-1, 1, (filters, kernel_size**2)).astype(dtype)
+        self.dtype = dtype
         self.strides = strides
         if input_shape:
             self.input_shape = (int(math.sqrt(input_shape))+self.padding)**2
@@ -47,10 +48,10 @@ class Conv2D(Layer):
             self.input_shape = (int(math.sqrt(prevLayer.units)) + self.padding)**2
         self.x_rowcol = int(np.sqrt(self.input_shape))
         self.y_rowcol = (self.x_rowcol + 2 * self.padding - self.kernel_size)/self.strides[0] + 1
-        self.X = np.zeros((self.batch, self.channel, self.kernel_size**2, self.y_rowcol**2))
-        self.E = np.zeros((self.batch, self.filterNum, self.y_rowcol**2))
-        self.err_delta = np.zeros((self.batch, self.channel, self.x_rowcol, self.x_rowcol))
-        self.Y = np.zeros((self.batch, self.filterNum, self.y_rowcol**2))
+        self.X = np.zeros((self.batch, self.channel, self.kernel_size**2, self.y_rowcol**2), dtype=self.dtype)
+        self.E = np.zeros((self.batch, self.filterNum, self.y_rowcol**2), dtype=self.dtype)
+        self.err_delta = np.zeros((self.batch, self.channel, self.x_rowcol, self.x_rowcol), dtype=self.dtype)
+        self.Y = np.zeros((self.batch, self.filterNum, self.y_rowcol**2), dtype=self.dtype)
 
     def forward(self, x):
         x = x.reshape(self.batch, self.channel, self.x_rowcol-self.padding, self.x_rowcol-self.padding)
@@ -89,10 +90,11 @@ class Conv2D(Layer):
         return self.err_delta
 
 class MaxPooling2D(Layer):
-    def __init__(self, kernel_size, strides=(1,1)):
+    def __init__(self, kernel_size, strides=(1,1), dtype=np.float32):
         super(MaxPooling2D, self).__init__()
         self.kernel_size = kernel_size
         self.strides = strides
+        self.dtype = dtype
 
     def configure(self, data_shape, prevLayer = None):
         self.prevLayer = prevLayer
@@ -103,10 +105,10 @@ class MaxPooling2D(Layer):
         self.channel = prevLayer.prevLayer.filterNum
         self.batch = data_shape[0]
         self.maxLocs = np.zeros((self.batch, self.channel, self.y_rowcol**2), dtype=int)
-        self.X = np.zeros((self.batch, self.channel, self.kernel_size**2, self.y_rowcol**2))
-        self.E = np.zeros((self.batch, self.channel, self.y_rowcol**2))
-        self.err_delta = np.zeros((self.batch, self.channel, self.x_rowcol, self.x_rowcol))
-        self.Y = np.zeros((self.batch, self.channel, self.y_rowcol**2))
+        self.X = np.zeros((self.batch, self.channel, self.kernel_size**2, self.y_rowcol**2), dtype=self.dtype)
+        self.E = np.zeros((self.batch, self.channel, self.y_rowcol**2), dtype=self.dtype)
+        self.err_delta = np.zeros((self.batch, self.channel, self.x_rowcol, self.x_rowcol), dtype=self.dtype)
+        self.Y = np.zeros((self.batch, self.channel, self.y_rowcol**2), dtype=self.dtype)
 
     def forward(self, x):
         for i in range(0, self.y_rowcol, self.strides[0]):
@@ -134,21 +136,22 @@ class MaxPooling2D(Layer):
 
 
 class FullyConnect(Layer):
-    def __init__(self, units, input_shape=0):
+    def __init__(self, units, input_shape=0, dtype=np.float32):
         super(FullyConnect, self).__init__(input_shape, units)
-        self.W = np.random.uniform(-1, 1, (input_shape, units))
+        self.W = np.random.uniform(-1, 1, (input_shape, units)).astype(dtype)
         # TODO : sharing bias to all batch
-        self.bias = np.random.uniform(-1, 1, 1)
+        self.bias = np.random.uniform(-1, 1, 1).astype(dtype)
         self.original_shape = None
+        self.dtype = dtype
 
     def configure(self, data_shape, prevLayer = None):
         self.prevLayer = prevLayer
         self.batch = data_shape[0]
         if isinstance(prevLayer, MaxPooling2D):
             self.input_shape = prevLayer.channel * prevLayer.y_rowcol * prevLayer.y_rowcol
-        self.X = np.zeros((self.batch, self.input_shape))
-        self.E = np.zeros((self.batch, self.units))
-        self.Y = np.zeros((self.batch, self.units))
+        self.X = np.zeros((self.batch, self.input_shape), dtype=self.dtype)
+        self.E = np.zeros((self.batch, self.units), dtype=self.dtype)
+        self.Y = np.zeros((self.batch, self.units), dtype=self.dtype)
 
     def forward(self, x):
         # for 2D data (like image)
