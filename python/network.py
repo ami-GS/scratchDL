@@ -27,7 +27,7 @@ class Network:
     def predict(self, X, batch=1):
         prevLayer = None
         for l in self.layers:
-            l.configure(X.shape, prevLayer)
+            l.configure(X.shape, "TEST", prevLayer)
             prevLayer = l
 
         ans = np.zeros((X.shape[0], self.last_units))
@@ -45,7 +45,7 @@ class Network:
         if self.configured == False:
             prevLayer = None
             for l in self.layers:
-                l.configure(X.shape, prevLayer)
+                l.configure(X.shape, "TRAIN", prevLayer)
                 prevLayer = l
 
         self.Y = X

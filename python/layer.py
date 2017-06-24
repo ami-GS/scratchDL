@@ -6,7 +6,8 @@ class Layer(object):
         self.input_shape = input_shape
         self.units = units
 
-    def configure(self, shape, prevLayer):
+    def configure(self, shape, phase, prevLayer):
+        self.phase = phase
         self.prevLayer = prevLayer
 
     def forward(self, x):
@@ -32,7 +33,8 @@ class Conv2D(Layer):
             self.x_rowcol = int(np.sqrt(self.input_shape))
             self.y_rowcol = self.x_rowcol - self.kernel_size+1
 
-    def configure(self, data_shape, prevLayer=None):
+    def configure(self, data_shape, phase, prevLayer=None):
+        self.phase = phase
         self.prevLayer = prevLayer
         self.channel = data_shape[1]
         self.batch = data_shape[0]
@@ -43,9 +45,10 @@ class Conv2D(Layer):
         self.x_rowcol = int(np.sqrt(self.input_shape))
         self.y_rowcol = (self.x_rowcol + 2 * self.padding - self.kernel_size)/self.strides[0] + 1
         self.X = np.zeros((self.batch, self.channel, self.kernel_size**2, self.y_rowcol**2), dtype=self.dtype)
-        self.E = np.zeros((self.batch, self.filterNum, self.y_rowcol**2), dtype=self.dtype)
-        self.err_delta = np.zeros((self.batch, self.channel, self.x_rowcol, self.x_rowcol), dtype=self.dtype)
         self.Y = np.zeros((self.batch, self.filterNum, self.y_rowcol**2), dtype=self.dtype)
+        if phase == "TRAIN":
+            self.E = np.zeros((self.batch, self.filterNum, self.y_rowcol**2), dtype=self.dtype)
+            self.err_delta = np.zeros((self.batch, self.channel, self.x_rowcol, self.x_rowcol), dtype=self.dtype)
 
     def forward(self, x):
         x = x.reshape(self.batch, self.channel, self.x_rowcol-self.padding, self.x_rowcol-self.padding)
@@ -90,7 +93,8 @@ class MaxPooling2D(Layer):
         self.strides = strides
         self.dtype = dtype
 
-    def configure(self, data_shape, prevLayer = None):
+    def configure(self, data_shape, phase, prevLayer = None):
+        self.phase = phase
         self.prevLayer = prevLayer
         # TODO : not good,
         self.x_rowcol = prevLayer.prevLayer.y_rowcol
@@ -98,11 +102,12 @@ class MaxPooling2D(Layer):
         self.y_rowcol = self.x_rowcol - self.kernel_size+1
         self.channel = prevLayer.prevLayer.filterNum
         self.batch = data_shape[0]
-        self.maxLocs = np.zeros((self.batch, self.channel, self.y_rowcol**2), dtype=int)
         self.X = np.zeros((self.batch, self.channel, self.kernel_size**2, self.y_rowcol**2), dtype=self.dtype)
-        self.E = np.zeros((self.batch, self.channel, self.y_rowcol**2), dtype=self.dtype)
-        self.err_delta = np.zeros((self.batch, self.channel, self.x_rowcol, self.x_rowcol), dtype=self.dtype)
-        self.Y = np.zeros((self.batch, self.channel, self.y_rowcol**2), dtype=self.dtype)
+        if phase == "TRAIN":
+            self.maxLocs = np.zeros((self.batch, self.channel, self.y_rowcol**2), dtype=int)
+            self.E = np.zeros((self.batch, self.channel, self.y_rowcol**2), dtype=self.dtype)
+            self.err_delta = np.zeros((self.batch, self.channel, self.x_rowcol, self.x_rowcol), dtype=self.dtype)
+            self.Y = np.zeros((self.batch, self.channel, self.y_rowcol**2), dtype=self.dtype)
 
     def forward(self, x):
         for i in range(0, self.y_rowcol, self.strides[0]):
@@ -110,9 +115,10 @@ class MaxPooling2D(Layer):
                 self.X[:, :, :, self.y_rowcol*i+j%self.y_rowcol] = \
                 x[:, :, i:i+self.kernel_size, j:j+self.kernel_size].reshape(self.batch, self.channel, self.kernel_size**2)
 
-        self.maxLocs[:] = self.X.argmax(axis=2)
-        self.Y = self.X.max(axis=2)
-        return self.Y.reshape(self.batch, self.channel, self.y_rowcol, self.y_rowcol)
+        if self.phase == "TRAIN":
+            self.maxLocs[:] = self.X.argmax(axis=2)
+        return self.X.max(axis=2).reshape(self.batch, self.channel, self.y_rowcol, self.y_rowcol)
+        #return self.Y.reshape(self.batch, self.channel, self.y_rowcol, self.y_rowcol)
 
     def backward(self, err_delta):
         self.E[:] = err_delta.reshape(self.batch, self.channel, self.y_rowcol**2)
@@ -138,14 +144,16 @@ class FullyConnect(Layer):
         self.original_shape = None
         self.dtype = dtype
 
-    def configure(self, data_shape, prevLayer = None):
+    def configure(self, data_shape, phase, prevLayer = None):
+        self.phase = phase
         self.prevLayer = prevLayer
         self.batch = data_shape[0]
         if isinstance(prevLayer, MaxPooling2D):
             self.input_shape = prevLayer.channel * prevLayer.y_rowcol * prevLayer.y_rowcol
-        self.X = np.zeros((self.batch, self.input_shape), dtype=self.dtype)
-        self.E = np.zeros((self.batch, self.units), dtype=self.dtype)
-        self.Y = np.zeros((self.batch, self.units), dtype=self.dtype)
+        if phase == "TRAIN":
+            self.X = np.zeros((self.batch, self.input_shape), dtype=self.dtype)
+            self.E = np.zeros((self.batch, self.units), dtype=self.dtype)
+            self.Y = np.zeros((self.batch, self.units), dtype=self.dtype)
 
     def forward(self, x):
         # for 2D data (like image)
@@ -153,9 +161,9 @@ class FullyConnect(Layer):
             self.original_shape = x.shape
             x = x.reshape(self.original_shape[0], reduce(lambda x,y:x*y, self.original_shape[1:]))
 
-        self.X[:] = x
-        self.Y = x.dot(self.W) + self.bias
-        return self.Y
+        if self.phase == "TRAIN":
+            self.X[:] = x
+        return x.dot(self.W) + self.bias
 
     def backward(self, err_delta):
         self.E[:] = err_delta
