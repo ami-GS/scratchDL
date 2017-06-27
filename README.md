@@ -5,7 +5,7 @@ Deep learning implementation
 #### TODO
 
 - python
-  - optimizer (partially done)
   - recurrent
 - C++
+  - abstraction class
   - after python
