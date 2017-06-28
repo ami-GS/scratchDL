@@ -3,17 +3,17 @@
 
 class Layer {
 public:
-    Layer(int input_shape, int unit);
+    Layer(int input_shape, int units);
     virtual ~Layer();
     virtual configure();
     virtual forward();
     virtual backward();
 };
 
-class FullyConnect : public Later {
+class FullyConnect : public Layer {
 public:
-    FullyConnect(int units, int input_shape);
+    FullyConnect(int input_shape, int units);
     ~FullyConnect();
-}
+};
 
 #endif // CPP_LAYER_H_
