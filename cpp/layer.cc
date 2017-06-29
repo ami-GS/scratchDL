@@ -14,6 +14,29 @@ FullyConnect::~FullyConnect() {
 }
 
 int FullyConnect::configure(int batch, Layer* prevLayer) {
+    this->batch = batch;
+    this->Y = (float*)malloc(sizeof(float)*this->batch*this->units);
+    this->W = (float*)malloc(sizeof(float)*this->input_shape*this->units);
+    this->E = (float*)malloc(sizeof(float)*this->batch*this->input_shape);
+    this->X = (float*)malloc(sizeof(float)*this->batch*this->input_shape);
+    for (int b = 0; b < this->batch; b++) {
+        for (int u = 0; u < this->units; u++) {
+            this->Y[b*this->units + u] = 0;
+        }
+    }
+    for (int b = 0; b < this->batch; b++) {
+        for (int i = 0; i < this->input_shape; i++) {
+            this->Y[b*this->input_shape + i] = 0;
+        }
+    }
+    std::random_device rd;
+    std::mt19937 mt(rd());
+    std::uniform_real_distribution<float> rand(-1.0,1.0);
+    for (int i = 0; i < this->input_shape; i++) {
+        for (int u = 0; u < this->units; u++) {
+            this->W[i*this->units + u] = rand(mt);
+        }
+    }
     return 1;
 }
 
