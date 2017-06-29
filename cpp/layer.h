@@ -3,6 +3,14 @@
 
 class Layer {
 public:
+    int batch;
+    int input_shape;
+    int units;
+    Layer* prevLayer;
+    float* E;
+    float* W;
+    float* Y;
+    float* X;
     Layer(int input_shape, int units);
     virtual ~Layer();
     virtual int configure(int batch, Layer* prevLayer) = 0;
