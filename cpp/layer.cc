@@ -41,6 +41,14 @@ int FullyConnect::configure(int batch, Layer* prevLayer) {
 }
 
 void FullyConnect::forward(float* x) {
+    this->X = x;
+    for (int b = 0; b < this->batch; b++) {
+        for (int i = 0; i < this->input_shape; i++) {
+            for (int u = 0; u < this->units; u++) {
+                this->Y[b*this->units + u] += x[b*this->input_shape + i] * this->W[i*this->units + u];
+            }
+        }
+    }
     return;
 }
 
