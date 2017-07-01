@@ -26,3 +26,8 @@ void Sigmoid::forward(float* x) {
     }
     return;
 }
+
+
+void Sigmoid::backward(float* e) {
+    return;
+}
