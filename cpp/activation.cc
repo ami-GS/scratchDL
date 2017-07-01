@@ -3,7 +3,6 @@
 
 Activation::Activation() : Layer(0, 0) {}
 Activation::~Activation() {}
-}
 
 int Activation::configure(int batch, Layer* prevLayer) {
     this->batch = batch;
@@ -16,8 +15,8 @@ int Activation::configure(int batch, Layer* prevLayer) {
     return 1;
 }
 
-Sigmoid::Sigmoid() {};
-Sigmoid::~Sigmoid() {};
+Sigmoid::Sigmoid() {}
+Sigmoid::~Sigmoid() {}
 
 void Sigmoid::forward(float* x) {
     for (int b = 0; b < this->batch; b++) {
