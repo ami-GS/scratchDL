@@ -16,6 +16,9 @@ FullyConnect::~FullyConnect() {
 
 int FullyConnect::configure(int batch, Layer* prevLayer) {
     this->batch = batch;
+    if (prevLayer != nullptr) {
+        this->prevLayer = prevLayer;
+    }
     this->Y = (float*)malloc(sizeof(float)*this->batch*this->units);
     this->W = (float*)malloc(sizeof(float)*this->input_shape*this->units);
     this->E = (float*)malloc(sizeof(float)*this->batch*this->input_shape);
