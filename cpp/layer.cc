@@ -76,3 +76,81 @@ void FullyConnect::backward(float* e) {
 
     return;
 }
+
+
+Conv2D::Conv2D(int input_shape, int channel, int filter, int kernel_size, int stride, int padding) : Layer(input_shape, (input_shape + 2*padding - kernel_size)/stride + 1), i_rowcol((int)std::sqrt((float)input_shape)), channel(channel), filter(filter), kernel_size(kernel_size), stride(stride), padding(padding) {
+    this->u_rowcol = (int)std::sqrt((float)this->units);
+}
+Conv2D::~Conv2D() {
+    delete this->F;
+}
+
+int Conv2D::configure(int batch, Layer* prevLayer) {
+    if (prevLayer != nullptr) {
+        this->prevLayer = prevLayer;
+    }
+    this->batch = batch;
+    if (this->stride <= 0) {
+        // warning
+        this->stride = 1;
+    }
+    this->X = (float*)malloc(sizeof(float)*this->batch*this->channel*this->input_shape);
+    // for filter and data matmul
+    //this->X = (float*)malloc(sizeof(float)*this->batch*this->channel*this->kernel_size*this->kernel_size*this->units*this->units);
+    this->Y = (float*)malloc(sizeof(float)*this->batch*this->filter*this->units);
+    this->E = (float*)malloc(sizeof(float)*this->batch*this->channel*this->input_shape);
+    this->F = (float*)malloc(sizeof(float)*this->filter*this->kernel_size*this->kernel_size);
+    return 1;
+}
+
+void Conv2D::forward(float* x) {
+    for (int i = 0; i < this->batch*this->filter*this->units; i++) {
+        this->Y[i] = 0;
+    }
+    for (int b = 0; b < this->batch; b++) {
+        for (int c = 0; c < this->channel; c++) {
+            for (int f = 0; f < this->filter; f++) {
+                for (int ro = 0; ro + this->kernel_size < this->i_rowcol; ro += this->stride) {
+                    for (int co = 0; co + this->kernel_size < this->i_rowcol; co += this->stride) {
+                        for (int ki = 0; ki < this->kernel_size; ki++) {
+                            for (int kj = 0; kj < this->kernel_size; kj++) {
+                                this->Y[b*this->units*this->filter+f*this->units+ro*this->i_rowcol+co] += this->X[b*this->input_shape*this->channel+c*this->input_shape+ro*this->i_rowcol+co+ki*this->i_rowcol+kj] * this->F[ki*this->kernel_size+kj];
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return;
+}
+
+
+void Conv2D::backward(float* e) {
+    for (int i = 0; i < this->batch*this->channel*this->input_shape; i++) {
+        this->E[i] = 0;
+    }
+    for (int b = 0; b < this->batch; b++) {
+        for (int c = 0; c < this->channel; c++) {
+            for (int f = 0; f < this->filter; f++) {
+                for (int ro = 0; ro < this->u_rowcol; ro++) {
+                    for (int co = 0; co < this->u_rowcol; co++) {
+                        for (int ki = 0; ki < this->kernel_size; ki++) {
+                            for (int kj = 0; kj < this->kernel_size; kj++) {
+                                this->E[b*this->channel*this->input_shape+c*this->input_shape+ro*this->stride+co*this->stride+ki*this->input_shape+kj] += this->Y[b*this->filter*this->units+f*this->units+ro*this->u_rowcol+co] * this->F[ki*this->kernel_size*kj];
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    for (int b = 0; b < this->batch; b++) {
+        for (int c = 0; c < this->channel; c++) {
+            for (int f = 0; f < this->filter; f++) {
+
+            }
+        }
+    }
+}
