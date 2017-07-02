@@ -7,5 +7,6 @@ Deep learning implementation
 - python
   - recurrent
 - C++
-  - abstraction class
-  - after python
+  - openMP enabled
+  - MKL version
+  - python interface
