@@ -8,7 +8,6 @@ public:
     int units;
     Layer* prevLayer;
     float* E;
-    float* W;
     float* Y;
     float* X;
     Layer(int input_shape, int units);
@@ -20,6 +19,7 @@ public:
 
 class FullyConnect : public Layer {
 public:
+    float* W;
     FullyConnect(int input_shape, int units);
     ~FullyConnect();
     int configure(int batch, Layer* prevLayer);

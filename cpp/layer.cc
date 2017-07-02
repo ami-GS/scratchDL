@@ -3,14 +3,15 @@
 #include <random>
 
 Layer::Layer(int input_shape, int units) : batch(1), input_shape(input_shape), units(units), prevLayer(nullptr) {}
-Layer::~Layer() {}
+Layer::~Layer() {
+    delete this->E;
+    delete this->Y;
+    delete this->X;
+}
 
 FullyConnect::FullyConnect(int input_shape, int units) : Layer(input_shape, units) {}
 FullyConnect::~FullyConnect() {
-    delete this->E;
     delete this->W;
-    delete this->Y;
-    delete this->X;
 }
 
 int FullyConnect::configure(int batch, Layer* prevLayer) {
