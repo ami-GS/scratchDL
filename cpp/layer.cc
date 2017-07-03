@@ -104,6 +104,14 @@ int Conv2D::configure(int batch, Layer* prevLayer) {
     this->Y = (float*)malloc(sizeof(float)*this->batch*this->filter*this->units);
     this->E = (float*)malloc(sizeof(float)*this->batch*this->channel*this->input_shape);
     this->F = (float*)malloc(sizeof(float)*this->filter*this->kernel_size*this->kernel_size);
+
+    std::random_device rd;
+    std::mt19937 mt(rd());
+    std::uniform_real_distribution<float> rand(-1.0,1.0);
+    for (int i = 0; i < this->filter*this->kernel_size*this->kernel_size; i++) {
+        this->F[i] = rand(mt);
+    }
+
     return 1;
 }
 
