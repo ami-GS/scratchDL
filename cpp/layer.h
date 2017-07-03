@@ -44,4 +44,19 @@ public:
     void backward(float* e);
 };
 
+class MaxPooling2D : public Layer {
+public:
+    int* L; // locations
+    int i_rowcol;
+    int u_rowcol;
+    int channel;
+    int kernel_size;
+    int stride;
+    MaxPooling2D(int input_shape, int channel, int kernel_size, int stride);
+    ~MaxPooling2D();
+    int configure(int batch, Layer* prevLayer);
+    void forward(float* x);
+    void backward(float* e);
+};
+
 #endif // CPP_LAYER_H_

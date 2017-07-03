@@ -177,7 +177,63 @@ void Conv2D::backward(float* e) {
 }
 
 
+MaxPooling2D::MaxPooling2D(int input_shape, int channel, int kernel_size, int stride) : Layer(input_shape, 0), channel(channel), i_rowcol((int)std::sqrt((float)input_shape)), kernel_size(kernel_size), stride(stride) {
+    this->u_rowcol = (this->i_rowcol - kernel_size)/stride + 1;
+    this->units = this->u_rowcol*this->u_rowcol;
+}
+MaxPooling2D::~MaxPooling2D() {
+    delete this->L;
+}
+
+int MaxPooling2D::configure(int batch, Layer* prevLayer) {
+    if (prevLayer != nullptr) {
+        this->prevLayer = prevLayer;
+    }
+    this->Y = (float*)malloc(sizeof(float)*this->batch*this->channel*this->units);
+    this->L = (int*)malloc(sizeof(int)*this->batch*this->channel*this->units);
+    this->E = (float*)malloc(sizeof(float)*this->batch*this->channel*this->input_shape);
+    return 1;
+}
+
+void MaxPooling2D::forward(float* x) {
+    for (int b = 0; b < this->batch; b++) {
+        for (int c = 0; c < this->channel; c++) {
+            for (int ro = 0; ro < this->u_rowcol; ro++) {
+                for (int co = 0; co < this->u_rowcol; co++) {
+                    float tmp = x[b*this->channel*this->input_shape+c*this->input_shape+ro*this->i_rowcol+co];
+                    for (int ki = 0; ki < this->kernel_size; ki++) {
+                        for (int kj = 1; kj < this->kernel_size; kj++) {
+                            if (tmp < x[b*this->channel*this->input_shape+c*this->input_shape+ro*this->i_rowcol+co+ki*this->i_rowcol+kj]) {
+                                tmp = x[b*this->channel*this->input_shape+c*this->input_shape+ro*this->i_rowcol+co+ki*this->i_rowcol+kj];
+                                this->Y[b*this->channel*this->units+c*this->units+ro*this->u_rowcol+co] = tmp;
+                                this->L[b*this->channel*this->units+c*this->units+ro*this->u_rowcol+co] = ki*this->input_shape+kj;
+                            }
+                        }
+                    }
+                }
             }
         }
     }
+    return;
+}
+
+
+void MaxPooling2D::backward(float* e) {
+    for (int i = 0; i < this->batch*this->channel*this->input_shape; i++) {
+        this->E[i] = 0;
+    }
+    for (int b = 0; b < this->batch; b++) {
+        for (int c = 0; c < this->channel; c++) {
+            for (int ro = 0; ro < this->u_rowcol; ro++) {
+                for (int co = 0; co < this->u_rowcol; co++) {
+                    for (int ki = 0; ki < this->kernel_size; ki++) {
+                        for (int kj = 1; kj < this->kernel_size; kj++) {
+                            this->E[b*this->input_shape*this->channel+c*this->input_shape+ro*this->i_rowcol+co+this->L[b*this->input_shape*this->channel+c*this->input_shape+ro*this->i_rowcol+co]] = e[b*this->units*this->channel+c*this->units+ro*this->u_rowcol+co];
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return;
 }
