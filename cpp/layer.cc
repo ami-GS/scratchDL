@@ -161,6 +161,21 @@ void Conv2D::backward(float* e) {
     for (int b = 0; b < this->batch; b++) {
         for (int c = 0; c < this->channel; c++) {
             for (int f = 0; f < this->filter; f++) {
+                for (int ro = 0; ro < this->u_rowcol; ro++) {
+                    for (int co = 0; co < this->u_rowcol; co++) {
+                        for (int ki = 0; ki < this->kernel_size; ki++) {
+                            for (int kj = 0; kj < this->kernel_size; kj++) {
+                                this->F[f*this->kernel_size*this->kernel_size+ki*this->kernel_size+kj] -= this->X[b*this->channel*this->input_shape+c*this->input_shape+ro*this->u_rowcol+co+ki*this->i_rowcol+kj] * e[b*this->filter*this->units+f*this->units+ro*this->u_rowcol+co]/this->batch;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return;
+}
+
 
             }
         }
