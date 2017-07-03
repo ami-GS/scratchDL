@@ -81,8 +81,9 @@ void FullyConnect::backward(float* e) {
 }
 
 
-Conv2D::Conv2D(int input_shape, int channel, int filter, int kernel_size, int stride, int padding) : Layer(input_shape, (input_shape + 2*padding - kernel_size)/stride + 1), i_rowcol((int)std::sqrt((float)input_shape)), channel(channel), filter(filter), kernel_size(kernel_size), stride(stride), padding(padding) {
-    this->u_rowcol = (int)std::sqrt((float)this->units);
+Conv2D::Conv2D(int input_shape, int channel, int filter, int kernel_size, int stride, int padding) : Layer(input_shape, 0), i_rowcol((int)std::sqrt((float)input_shape)), channel(channel), filter(filter), kernel_size(kernel_size), stride(stride), padding(padding) {
+    this->u_rowcol = (this->i_rowcol + 2*padding - kernel_size)/stride + 1;
+    this->units = this->u_rowcol*this->u_rowcol;
 }
 Conv2D::~Conv2D() {
     delete this->F;
