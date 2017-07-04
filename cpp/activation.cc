@@ -21,20 +21,16 @@ Sigmoid::Sigmoid() {}
 Sigmoid::~Sigmoid() {}
 
 void Sigmoid::forward(float* x) {
-    for (int b = 0; b < this->batch; b++) {
-        for (int i = 0; i < this->input_shape; i++) {
-            this->Y[b*this->input_shape+i] = 1/(1+std::exp(-x[b*this->input_shape+i]));
-        }
+    for (int bi = 0; bi < this->batch*this->input_shape; bi++) {
+        this->Y[bi] = 1/(1+std::exp(-x[bi]));
     }
     return;
 }
 
 
 void Sigmoid::backward(float* e) {
-    for (int b = 0; b < this->batch; b++) {
-        for (int i = 0; i < this->input_shape; i++) {
-            this->E[b*this->input_shape+i] = e[b*this->input_shape+i] * this->Y[b*this->input_shape+i]*(1-this->Y[b*this->input_shape+i]);
-        }
+    for (int bi = 0; bi < this->batch; bi++) {
+        this->E[bi] = e[bi] * this->Y[bi]*(1-this->Y[bi]);
     }
     return;
 }
