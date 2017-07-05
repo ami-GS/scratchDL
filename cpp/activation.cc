@@ -34,3 +34,22 @@ void Sigmoid::backward(float* e) {
     }
     return;
 }
+
+
+ReLU::ReLU() {}
+ReLU::~ReLU() {}
+
+void ReLU::forward(float* x) {
+    for (int bi = 0; bi < this->batch*this->input_shape; bi++) {
+        this->Y[bi] = (x[bi] > 0) * x[bi];
+    }
+    return;
+}
+
+
+void ReLU::backward(float* e) {
+    for (int bi = 0; bi < this->batch*this->input_shape; bi++) {
+        this->E[bi] = (this->Y[bi] > 0) * e[bi];
+    }
+    return;
+}

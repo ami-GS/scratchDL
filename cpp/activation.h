@@ -21,5 +21,13 @@ public:
     void backward(float* e);
 };
 
+class ReLU : public Activation {
+public:
+    ReLU();
+    ~ReLU();
+    void forward(float* x);
+    void backward(float* e);
+};
+
 
 #endif // CPP_ACTIVATION_H_
