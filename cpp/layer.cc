@@ -228,7 +228,7 @@ void MaxPooling2D::backward(float* e) {
                 for (int co = 0; co < this->u_rowcol; co++) {
                     for (int ki = 0; ki < this->kernel_size; ki++) {
                         for (int kj = 1; kj < this->kernel_size; kj++) {
-                            this->E[b*this->input_shape*this->channel+c*this->input_shape+ro*this->i_rowcol+co+this->L[b*this->input_shape*this->channel+c*this->input_shape+ro*this->i_rowcol+co]] = e[b*this->units*this->channel+c*this->units+ro*this->u_rowcol+co];
+                            this->E[b*this->input_shape*this->channel+c*this->input_shape+ro*this->i_rowcol+co+this->L[b*this->units*this->channel+c*this->units+ro*this->u_rowcol+co]] = e[b*this->units*this->channel+c*this->units+ro*this->u_rowcol+co];
                         }
                     }
                 }
