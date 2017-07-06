@@ -4,9 +4,12 @@
 class Layer {
 public:
     int batch;
+    int filter;
+    int channel;
     int input_shape;
     int units;
     Layer* prevLayer;
+    float* learning_rate;
     float* E;
     float* Y;
     float* X;
@@ -30,8 +33,6 @@ public:
 class Conv2D : public Layer {
 public:
     float* F;
-    int filter;
-    int channel;
     int i_rowcol;
     int u_rowcol;
     int kernel_size;
@@ -49,7 +50,6 @@ public:
     int* L; // locations
     int i_rowcol;
     int u_rowcol;
-    int channel;
     int kernel_size;
     int stride;
     MaxPooling2D(int input_shape, int channel, int kernel_size, int stride);

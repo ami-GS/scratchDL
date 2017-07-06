@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <random>
 
-Layer::Layer(int input_shape, int units) : batch(1), input_shape(input_shape), units(units), prevLayer(nullptr) {}
+Layer::Layer(int input_shape, int units) : batch(1), filter(0), channel(0), input_shape(input_shape), units(units), prevLayer(nullptr) {}
 Layer::~Layer() {
     delete this->E;
     delete this->Y;
@@ -81,9 +81,11 @@ void FullyConnect::backward(float* e) {
 }
 
 
-Conv2D::Conv2D(int input_shape, int channel, int filter, int kernel_size, int stride, int padding) : Layer(input_shape, 0), i_rowcol((int)std::sqrt((float)input_shape)), channel(channel), filter(filter), kernel_size(kernel_size), stride(stride), padding(padding) {
+Conv2D::Conv2D(int input_shape, int channel, int filter, int kernel_size, int stride, int padding) : Layer(input_shape, 0), i_rowcol((int)std::sqrt((float)input_shape)), kernel_size(kernel_size), stride(stride), padding(padding) {
     this->u_rowcol = (this->i_rowcol + 2*padding - kernel_size)/stride + 1;
     this->units = this->u_rowcol*this->u_rowcol;
+    this->channel = channel;
+    this->filter = filter;
 }
 Conv2D::~Conv2D() {
     delete this->F;
@@ -177,9 +179,10 @@ void Conv2D::backward(float* e) {
 }
 
 
-MaxPooling2D::MaxPooling2D(int input_shape, int channel, int kernel_size, int stride) : Layer(input_shape, 0), channel(channel), i_rowcol((int)std::sqrt((float)input_shape)), kernel_size(kernel_size), stride(stride) {
+MaxPooling2D::MaxPooling2D(int input_shape, int channel, int kernel_size, int stride) : Layer(input_shape, 0), i_rowcol((int)std::sqrt((float)input_shape)), kernel_size(kernel_size), stride(stride) {
     this->u_rowcol = (this->i_rowcol - kernel_size)/stride + 1;
     this->units = this->u_rowcol*this->u_rowcol;
+    this->channel = channel;
 }
 MaxPooling2D::~MaxPooling2D() {
     delete this->L;
