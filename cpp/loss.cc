@@ -21,8 +21,13 @@ int MSE::configure(int batch, Layer* prevLayer) {
 
 float MSE::error(float* x, int* label) {
     float e = 0;
-    for (int i = 0; i < this->prevLayer->units; i++) {
-        e += std::pow(std::abs(x[i]-(float)label[i]), 2)*0.5;
+    float tmp = 0;
+    for (int b = 0; b < this->batch; b++) {
+        tmp = 0;
+        for (int i = 0; i < this->prevLayer->units; i++) {
+            tmp += std::pow(std::abs(x[i]-(float)label[i]), 2)*0.5;
+        }
+        e += tmp/this->batch;
     }
     return e;
 }
