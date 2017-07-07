@@ -33,10 +33,8 @@ int FullyConnect::configure(int batch, Layer* prevLayer) {
     std::random_device rd;
     std::mt19937 mt(rd());
     std::uniform_real_distribution<float> rand(-1.0,1.0);
-    for (int i = 0; i < this->input_shape; i++) {
-        for (int u = 0; u < this->units; u++) {
-            this->W[i*this->units + u] = rand(mt);
-        }
+    for (int iu = 0; iu < this->input_shape*this->units; iu++) {
+            this->W[iu] = rand(mt);
     }
     return 1;
 }
