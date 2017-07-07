@@ -119,6 +119,7 @@ void Conv2D::forward(float* x) {
     for (int i = 0; i < this->batch*this->filter*this->units; i++) {
         this->Y[i] = 0;
     }
+    this->X = x;
     for (int b = 0; b < this->batch; b++) {
         for (int c = 0; c < this->channel; c++) {
             for (int f = 0; f < this->filter; f++) {
@@ -190,6 +191,7 @@ int MaxPooling2D::configure(int batch, Layer* prevLayer) {
     if (prevLayer != nullptr) {
         this->prevLayer = prevLayer;
     }
+    this->batch = batch;
     this->Y = (float*)malloc(sizeof(float)*this->batch*this->channel*this->units);
     this->L = (int*)malloc(sizeof(int)*this->batch*this->channel*this->units);
     this->E = (float*)malloc(sizeof(float)*this->batch*this->channel*this->input_shape);
@@ -207,7 +209,7 @@ void MaxPooling2D::forward(float* x) {
                             if (tmp < x[b*this->channel*this->input_shape+c*this->input_shape+ro*this->i_rowcol+co+ki*this->i_rowcol+kj]) {
                                 tmp = x[b*this->channel*this->input_shape+c*this->input_shape+ro*this->i_rowcol+co+ki*this->i_rowcol+kj];
                                 this->Y[b*this->channel*this->units+c*this->units+ro*this->u_rowcol+co] = tmp;
-                                this->L[b*this->channel*this->units+c*this->units+ro*this->u_rowcol+co] = ki*this->input_shape+kj;
+                                this->L[b*this->channel*this->units+c*this->units+ro*this->u_rowcol+co] = ki*this->i_rowcol+kj;
                             }
                         }
                     }
@@ -227,11 +229,7 @@ void MaxPooling2D::backward(float* e) {
         for (int c = 0; c < this->channel; c++) {
             for (int ro = 0; ro < this->u_rowcol; ro++) {
                 for (int co = 0; co < this->u_rowcol; co++) {
-                    for (int ki = 0; ki < this->kernel_size; ki++) {
-                        for (int kj = 1; kj < this->kernel_size; kj++) {
-                            this->E[b*this->input_shape*this->channel+c*this->input_shape+ro*this->i_rowcol+co+this->L[b*this->units*this->channel+c*this->units+ro*this->u_rowcol+co]] = e[b*this->units*this->channel+c*this->units+ro*this->u_rowcol+co];
-                        }
-                    }
+                    this->E[b*this->input_shape*this->channel+c*this->input_shape+ro*this->i_rowcol+co+this->L[b*this->units*this->channel+c*this->units+ro*this->u_rowcol+co]] = e[b*this->units*this->channel+c*this->units+ro*this->u_rowcol+co];
                 }
             }
         }
