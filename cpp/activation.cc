@@ -14,6 +14,7 @@ int Activation::configure(int batch, float learning_rate, Layer* prevLayer) {
     this->batch = batch;
     this->Y = (float*)malloc(sizeof(float)*this->batch*this->input_shape);
     this->E = (float*)malloc(sizeof(float)*this->batch*this->input_shape);
+    #pragma omp  parallel for
     for (int bi = 0; bi < this->batch*this->input_shape; bi++) {
         this->Y[bi] = 0;
         this->E[bi] = 0;
@@ -25,6 +26,7 @@ Sigmoid::Sigmoid() {}
 Sigmoid::~Sigmoid() {}
 
 void Sigmoid::forward(float* x) {
+    #pragma omp  parallel for
     for (int bi = 0; bi < this->batch*this->input_shape; bi++) {
         this->Y[bi] = 1/(1+std::exp(-x[bi]));
     }
@@ -33,6 +35,7 @@ void Sigmoid::forward(float* x) {
 
 
 void Sigmoid::backward(float* e) {
+    #pragma omp  parallel for
     for (int bi = 0; bi < this->batch*this->input_shape; bi++) {
         this->E[bi] = e[bi] * this->Y[bi]*(1-this->Y[bi]);
     }
@@ -44,6 +47,7 @@ ReLU::ReLU() {}
 ReLU::~ReLU() {}
 
 void ReLU::forward(float* x) {
+    #pragma omp  parallel for
     for (int bi = 0; bi < this->batch*this->input_shape; bi++) {
         this->Y[bi] = (x[bi] > 0) * x[bi];
     }
@@ -52,8 +56,43 @@ void ReLU::forward(float* x) {
 
 
 void ReLU::backward(float* e) {
+    #pragma omp  parallel for
     for (int bi = 0; bi < this->batch*this->input_shape; bi++) {
         this->E[bi] = (this->Y[bi] > 0) * e[bi];
     }
+    return;
+}
+
+
+Softmax::Softmax() {}
+Softmax::~Softmax() {}
+
+void Softmax::forward(float* x) {
+    float* maxVal = (float*)malloc(sizeof(float)*this->batch);
+    for (int b = 0; b < this->batch; b++) {
+        maxVal[b] = x[b*this->input_shape];
+        for (int i = 1; i < this->input_shape; i++) {
+            if (maxVal[b] < x[b*this->input_shape+i]) {
+                maxVal[b] = x[b*this->input_shape+i];
+            }
+        }
+    }
+
+    float tmp2;
+    for (int b = 0; b < this->batch; b++) {
+        tmp2 = 0;
+        for (int i = 0; i < this->input_shape; i++) {
+            this->Y[b*this->input_shape+i] = std::exp(x[b*this->input_shape+i] - maxVal[b]);
+            tmp2 += this->Y[b*this->input_shape+i];
+        }
+        for (int i = 0; i < this->input_shape; i++) {
+            this->Y[b*this->input_shape+i] = this->Y[b*this->input_shape+i] / tmp2;
+        }
+    }
+    return;
+}
+
+void Softmax::backward(float* e) {
+    this->E = e;
     return;
 }

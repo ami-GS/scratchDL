@@ -29,5 +29,12 @@ public:
     void backward(float* e);
 };
 
+class Softmax : public Activation {
+public:
+    Softmax();
+    ~Softmax();
+    void forward(float* x);
+    void backward(float* e);
+};
 
 #endif // CPP_ACTIVATION_H_
