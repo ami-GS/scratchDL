@@ -4,11 +4,12 @@
 Activation::Activation() : Layer(0, 0) {}
 Activation::~Activation() {}
 
-int Activation::configure(int batch, Layer* prevLayer) {
+int Activation::configure(int batch, float learning_rate, Layer* prevLayer) {
     this->input_shape = prevLayer->units;
     if (prevLayer->channel != 0) {
         this->input_shape = prevLayer->units*prevLayer->channel;
     }
+    this->learning_rate = learning_rate;
     this->units = this->input_shape;
     this->batch = batch;
     this->Y = (float*)malloc(sizeof(float)*this->batch*this->input_shape);

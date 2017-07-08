@@ -9,13 +9,13 @@ public:
     int input_shape;
     int units;
     Layer* prevLayer;
-    float* learning_rate;
+    float learning_rate;
     float* E;
     float* Y;
     float* X;
     Layer(int input_shape, int units);
     virtual ~Layer();
-    virtual int configure(int batch, Layer* prevLayer) = 0;
+    virtual int configure(int batch, float learning_rate, Layer* prevLayer) = 0;
     virtual void forward(float* x) = 0;
     virtual void backward(float* e) = 0;
 };
@@ -25,7 +25,7 @@ public:
     float* W;
     FullyConnect(int input_shape, int units);
     ~FullyConnect();
-    int configure(int batch, Layer* prevLayer);
+    int configure(int batch, float learning_rate, Layer* prevLayer);
     void forward(float* x);
     void backward(float* e);
 };
@@ -40,7 +40,7 @@ public:
     int padding;
     Conv2D(int input_shape, int channel, int filter, int kernel_size, int stride, int padding);
     ~Conv2D();
-    int configure(int batch, Layer* prevLayer);
+    int configure(int batch, float learning_rate, Layer* prevLayer);
     void forward(float* x);
     void backward(float* e);
 };
@@ -54,7 +54,7 @@ public:
     int stride;
     MaxPooling2D(int input_shape, int channel, int kernel_size, int stride);
     ~MaxPooling2D();
-    int configure(int batch, Layer* prevLayer);
+    int configure(int batch, float learning_rate, Layer* prevLayer);
     void forward(float* x);
     void backward(float* e);
 };
