@@ -14,11 +14,9 @@ int Activation::configure(int batch, float learning_rate, Layer* prevLayer) {
     this->batch = batch;
     this->Y = (float*)malloc(sizeof(float)*this->batch*this->input_shape);
     this->E = (float*)malloc(sizeof(float)*this->batch*this->input_shape);
-    for (int b = 0; b < this->batch; b++) {
-        for (int i = 0; i < this->input_shape; i++) {
-            this->Y[b*this->input_shape+i] = 0;
-            this->E[b*this->input_shape+i] = 0;
-        }
+    for (int bi = 0; bi < this->batch*this->input_shape; bi++) {
+        this->Y[bi] = 0;
+        this->E[bi] = 0;
     }
     return 1;
 }
@@ -35,7 +33,7 @@ void Sigmoid::forward(float* x) {
 
 
 void Sigmoid::backward(float* e) {
-    for (int bi = 0; bi < this->batch; bi++) {
+    for (int bi = 0; bi < this->batch*this->input_shape; bi++) {
         this->E[bi] = e[bi] * this->Y[bi]*(1-this->Y[bi]);
     }
     return;
