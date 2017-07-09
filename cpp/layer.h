@@ -23,6 +23,7 @@ public:
 class FullyConnect : public Layer {
 public:
     float* W;
+    float* B;
     FullyConnect(int input_shape, int units);
     ~FullyConnect();
     int configure(int batch, float learning_rate, Layer* prevLayer);

@@ -22,6 +22,7 @@ int FullyConnect::configure(int batch, float learning_rate, Layer* prevLayer) {
     }
     this->Y = (float*)malloc(sizeof(float)*this->batch*this->units);
     this->W = (float*)malloc(sizeof(float)*this->input_shape*this->units);
+    this->B = (float*)malloc(sizeof(float));
     this->E = (float*)malloc(sizeof(float)*this->batch*this->input_shape);
     this->X = (float*)malloc(sizeof(float)*this->batch*this->input_shape);
     for (int i = 0; i < this->batch*this->units; i++) {
@@ -37,6 +38,7 @@ int FullyConnect::configure(int batch, float learning_rate, Layer* prevLayer) {
     for (int iu = 0; iu < this->input_shape*this->units; iu++) {
             this->W[iu] = rand(mt);
     }
+    *this->B = rand(mt);
     return 1;
 }
 
@@ -48,7 +50,7 @@ void FullyConnect::forward(float* x) {
     for (int b = 0; b < this->batch; b++) {
         for (int i = 0; i < this->input_shape; i++) {
             for (int u = 0; u < this->units; u++) {
-                this->Y[b*this->units + u] += x[b*this->input_shape + i] * this->W[i*this->units + u];
+                this->Y[b*this->units + u] += x[b*this->input_shape + i] * this->W[i*this->units + u] + *this->B;
             }
         }
     }
@@ -74,6 +76,12 @@ void FullyConnect::backward(float* e) {
                 // TODO : not good for division in each calc
                 this->W[i*this->units + u] -= (this->learning_rate * this->X[b*this->input_shape + i] * e[b*this->units + u])/this->batch;
             }
+        }
+    }
+    #pragma omp  parallel for
+    for (int b = 0; b < this->batch; b++) {
+        for (int u = 0; u < this->units; u++) {
+            *this->B -= this->learning_rate * e[b*this->units + u]/this->batch;
         }
     }
 
