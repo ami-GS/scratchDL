@@ -25,13 +25,6 @@ int FullyConnect::configure(int batch, float learning_rate, Layer* prevLayer) {
     this->B = (float*)malloc(sizeof(float));
     this->E = (float*)malloc(sizeof(float)*this->batch*this->input_shape);
     this->X = (float*)malloc(sizeof(float)*this->batch*this->input_shape);
-    for (int i = 0; i < this->batch*this->units; i++) {
-            this->Y[i] = 0;
-    }
-    for (int i = 0; i < this->batch*this->input_shape; i++) {
-            this->E[i] = 0;
-            this->X[i] = 0;
-    }
     std::random_device rd;
     std::mt19937 mt(rd());
     std::uniform_real_distribution<float> rand(-1.0,1.0);
@@ -138,7 +131,7 @@ void Conv2D::forward(float* x) {
                     for (int co = 0; co + this->kernel_size < this->i_rowcol; co += this->stride) {
                         for (int ki = 0; ki < this->kernel_size; ki++) {
                             for (int kj = 0; kj < this->kernel_size; kj++) {
-                                this->Y[b*this->units*this->filter+f*this->units+ro*this->i_rowcol+co] += this->X[b*this->input_shape*this->channel+c*this->input_shape+ro*this->i_rowcol+co+ki*this->i_rowcol+kj] * this->F[ki*this->kernel_size+kj];
+                                this->Y[b*this->units*this->filter+f*this->units+ro*this->i_rowcol+co] += this->X[b*this->input_shape*this->channel+c*this->input_shape+ro*this->i_rowcol+co+ki*this->i_rowcol+kj] * this->F[f*this->kernel_size*this->kernel_size+ki*this->kernel_size+kj];
                             }
                         }
                     }
@@ -161,7 +154,7 @@ void Conv2D::backward(float* e) {
                     for (int co = 0; co < this->u_rowcol; co++) {
                         for (int ki = 0; ki < this->kernel_size; ki++) {
                             for (int kj = 0; kj < this->kernel_size; kj++) {
-                                this->E[b*this->channel*this->input_shape+c*this->input_shape+ro*this->stride+co*this->stride+ki*this->input_shape+kj] += this->Y[b*this->filter*this->units+f*this->units+ro*this->u_rowcol+co] * this->F[ki*this->kernel_size*kj];
+                                this->E[b*this->channel*this->input_shape+c*this->input_shape+ro*this->stride+co*this->stride+ki*this->i_rowcol+kj] += this->Y[b*this->filter*this->units+f*this->units+ro*this->u_rowcol+co] * this->F[f*this->kernel_size*this->kernel_size+ki*this->kernel_size+kj];
                             }
                         }
                     }
@@ -177,7 +170,7 @@ void Conv2D::backward(float* e) {
                     for (int co = 0; co < this->u_rowcol; co++) {
                         for (int ki = 0; ki < this->kernel_size; ki++) {
                             for (int kj = 0; kj < this->kernel_size; kj++) {
-                                this->F[f*this->kernel_size*this->kernel_size+ki*this->kernel_size+kj] -= (this->learning_rate * this->X[b*this->channel*this->input_shape+c*this->input_shape+ro*this->u_rowcol+co+ki*this->i_rowcol+kj] * e[b*this->filter*this->units+f*this->units+ro*this->u_rowcol+co])/this->batch;
+                                this->F[f*this->kernel_size*this->kernel_size+ki*this->kernel_size+kj] -= (this->learning_rate * this->X[b*this->channel*this->input_shape+c*this->input_shape+ro*this->i_rowcol+co+ki*this->i_rowcol+kj] * e[b*this->filter*this->units+f*this->units+ro*this->u_rowcol+co])/this->batch;
                             }
                         }
                     }
