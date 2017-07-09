@@ -204,11 +204,12 @@ int MaxPooling2D::configure(int batch, float learning_rate, Layer* prevLayer) {
 }
 
 void MaxPooling2D::forward(float* x) {
+    float tmp;
     for (int b = 0; b < this->batch; b++) {
         for (int c = 0; c < this->channel; c++) {
             for (int ro = 0; ro < this->u_rowcol; ro++) {
                 for (int co = 0; co < this->u_rowcol; co++) {
-                    float tmp = x[b*this->channel*this->input_shape+c*this->input_shape+ro*this->i_rowcol+co];
+                    tmp = x[b*this->channel*this->input_shape+c*this->input_shape+ro*this->i_rowcol+co];
                     for (int ki = 0; ki < this->kernel_size; ki++) {
                         for (int kj = 1; kj < this->kernel_size; kj++) {
                             if (tmp < x[b*this->channel*this->input_shape+c*this->input_shape+ro*this->i_rowcol+co+ki*this->i_rowcol+kj]) {
