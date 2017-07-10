@@ -28,6 +28,7 @@ int FullyConnect::configure(int batch, float learning_rate, Layer* prevLayer) {
     std::random_device rd;
     std::mt19937 mt(rd());
     std::uniform_real_distribution<float> rand(-1.0,1.0);
+    #pragma omp  parallel for
     for (int iu = 0; iu < this->input_shape*this->units; iu++) {
             this->W[iu] = rand(mt);
     }
@@ -36,10 +37,12 @@ int FullyConnect::configure(int batch, float learning_rate, Layer* prevLayer) {
 }
 
 void FullyConnect::forward(float* x) {
+    #pragma omp  parallel for
     for (int i = 0; i < this->batch*this->units; i++) {
         this->Y[i] = 0;
     }
     this->X = x;
+    #pragma omp  parallel for
     for (int b = 0; b < this->batch; b++) {
         for (int i = 0; i < this->input_shape; i++) {
             for (int u = 0; u < this->units; u++) {
@@ -51,9 +54,11 @@ void FullyConnect::forward(float* x) {
 }
 
 void FullyConnect::backward(float* e) {
+    #pragma omp  parallel for
     for (int i = 0; i < this->batch*this->input_shape; i++) {
         this->E[i] = 0;
     }
+    #pragma omp  parallel for
     for (int b = 0; b < this->batch; b++) {
         for (int u = 0; u < this->units; u++) {
             for (int i = 0; i < this->input_shape; i++) {
@@ -112,6 +117,7 @@ int Conv2D::configure(int batch, float learning_rate, Layer* prevLayer) {
     std::random_device rd;
     std::mt19937 mt(rd());
     std::uniform_real_distribution<float> rand(-1.0,1.0);
+    #pragma omp  parallel for
     for (int i = 0; i < this->filter*this->kernel_size*this->kernel_size; i++) {
         this->F[i] = rand(mt);
     }
@@ -120,10 +126,12 @@ int Conv2D::configure(int batch, float learning_rate, Layer* prevLayer) {
 }
 
 void Conv2D::forward(float* x) {
+    #pragma omp  parallel for
     for (int i = 0; i < this->batch*this->filter*this->units; i++) {
         this->Y[i] = 0;
     }
     this->X = x;
+    #pragma omp  parallel for
     for (int b = 0; b < this->batch; b++) {
         for (int c = 0; c < this->channel; c++) {
             for (int f = 0; f < this->filter; f++) {
@@ -144,9 +152,11 @@ void Conv2D::forward(float* x) {
 
 
 void Conv2D::backward(float* e) {
+    #pragma omp  parallel for
     for (int i = 0; i < this->batch*this->channel*this->input_shape; i++) {
         this->E[i] = 0;
     }
+    #pragma omp  parallel for
     for (int b = 0; b < this->batch; b++) {
         for (int c = 0; c < this->channel; c++) {
             for (int f = 0; f < this->filter; f++) {
@@ -163,6 +173,7 @@ void Conv2D::backward(float* e) {
         }
     }
 
+    #pragma omp  parallel for
     for (int b = 0; b < this->batch; b++) {
         for (int c = 0; c < this->channel; c++) {
             for (int f = 0; f < this->filter; f++) {
@@ -205,6 +216,7 @@ int MaxPooling2D::configure(int batch, float learning_rate, Layer* prevLayer) {
 
 void MaxPooling2D::forward(float* x) {
     float tmp;
+    #pragma omp  parallel for private(tmp)
     for (int b = 0; b < this->batch; b++) {
         for (int c = 0; c < this->channel; c++) {
             for (int ro = 0; ro < this->u_rowcol; ro++) {
@@ -228,9 +240,11 @@ void MaxPooling2D::forward(float* x) {
 
 
 void MaxPooling2D::backward(float* e) {
+    #pragma omp  parallel for
     for (int i = 0; i < this->batch*this->channel*this->input_shape; i++) {
         this->E[i] = 0;
     }
+    #pragma omp  parallel for
     for (int b = 0; b < this->batch; b++) {
         for (int c = 0; c < this->channel; c++) {
             for (int ro = 0; ro < this->u_rowcol; ro++) {

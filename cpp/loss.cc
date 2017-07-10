@@ -33,6 +33,7 @@ float MSE::error(float* x, int* label) {
 }
 
 void MSE::partial_derivative(float* x, int* label) {
+    #pragma omp  parallel for
     for (int i = 0; i < this->batch*this->prevLayer->units; i++) {
         this->D[i] = - ((float)label[i] - x[i]);
     }
