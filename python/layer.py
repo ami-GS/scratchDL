@@ -176,3 +176,43 @@ class FullyConnect(Layer):
         if self.original_shape:
             err_delta = err_delta.reshape(self.original_shape)
         return err_delta
+class BatchNorm(Layer):
+    def __init__(self, units=0, input_shape=0, dtype=np.float32):
+        super(BatchNorm, self).__init__(input_shape, units)
+        self.beta = None
+        self.gamma = None
+        self.sub = None
+        self.sq = None
+        self.invsq = None
+        self.var = None
+        self.xhat = None
+        self.epsilon = 10e-12
+
+    def configure(self, data_shape, phase, prevLayer = None):
+        self.phase = phase
+        self.prevLayer = prevLayer
+        self.input_shape = prevLayer.input_shape
+        self.units = prevLayer.units
+        self.batch = data_shape[0]
+        self.beta = 0
+        self.gamma = 1
+
+    def forward(self, x):
+        mean = np.sum(x, axis=0)/self.batch
+        self.sub = x - mean
+        self.var = np.var(x, axis=0)
+        self.sq = np.sqrt(self.var + self.epsilon)
+        self.invsq = 1/self.sq
+        self.xhat = self.sub*self.invsq
+        return self.gamma * self.xhat + self.beta
+
+    def backward(self, e):
+        dxhat = e * self.gamma
+        dvar = np.sum(dxhat * self.sub * self.sq**(1.5)/-2, axis=0)
+        dmean = np.sum(dxhat * - self.invsq, axis=0) + dvar * -2 * self.var
+        dx = dxhat * self.invsq + dvar * -2 * self.var + dmean / self.batch
+        db = np.sum(e, axis=0)
+        dg = db * self.xhat
+        self.beta -= db
+        self.gamma -= dg
+        return dx
