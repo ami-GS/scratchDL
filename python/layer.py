@@ -51,6 +51,7 @@ class Conv2D(Layer):
             self.err_delta = np.zeros((self.batch, self.channel, self.x_rowcol, self.x_rowcol), dtype=self.dtype)
 
     def forward(self, x):
+        self.Y = np.zeros((self.batch, self.filterNum, self.y_rowcol**2), dtype=self.dtype)
         x = x.reshape(self.batch, self.channel, self.x_rowcol-self.padding, self.x_rowcol-self.padding)
         if self.padding:
             x = np.lib.pad(x, (1,1), 'constant', constant_values=(0,0))
@@ -171,11 +172,12 @@ class FullyConnect(Layer):
 
         # updates
         np.subtract(self.W, self.optimizer(np.sum(np.einsum("bi,bj->bij", self.X, self.learning_rate*self.E), axis=0))/self.batch, self.W)
-        self.bias -= np.sum(self.learning_rate * self.E)
+        self.bias -= np.sum(self.learning_rate * self.E)/self.batch
 
         if self.original_shape:
             err_delta = err_delta.reshape(self.original_shape)
         return err_delta
+
 class BatchNorm(Layer):
     def __init__(self, units=0, input_shape=0, dtype=np.float32):
         super(BatchNorm, self).__init__(input_shape, units)
