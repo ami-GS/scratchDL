@@ -70,23 +70,23 @@ Softmax::~Softmax() {}
 void Softmax::forward(float* x) {
     float* maxVal = (float*)malloc(sizeof(float)*this->batch);
     for (int b = 0; b < this->batch; b++) {
-        maxVal[b] = x[b*this->input_shape];
+        maxVal[b] = std::abs(x[b*this->input_shape]);
         for (int i = 1; i < this->input_shape; i++) {
-            if (maxVal[b] < x[b*this->input_shape+i]) {
-                maxVal[b] = x[b*this->input_shape+i];
+            if (maxVal[b] < std::abs(x[b*this->input_shape+i])) {
+                maxVal[b] = std::abs(x[b*this->input_shape+i]);
             }
         }
     }
 
-    float tmp2;
+    float tmp;
     for (int b = 0; b < this->batch; b++) {
-        tmp2 = 0;
+        tmp = 0;
         for (int i = 0; i < this->input_shape; i++) {
-            this->Y[b*this->input_shape+i] = std::exp(x[b*this->input_shape+i] - maxVal[b]);
-            tmp2 += this->Y[b*this->input_shape+i];
+            this->Y[b*this->input_shape+i] = std::exp(x[b*this->input_shape+i]/maxVal[b]);
+            tmp += this->Y[b*this->input_shape+i];
         }
         for (int i = 0; i < this->input_shape; i++) {
-            this->Y[b*this->input_shape+i] = this->Y[b*this->input_shape+i] / tmp2;
+            this->Y[b*this->input_shape+i] = this->Y[b*this->input_shape+i] / tmp;
         }
     }
     return;
