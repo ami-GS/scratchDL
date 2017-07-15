@@ -4,14 +4,14 @@
 
 Layer::Layer(int input_shape, int units) : batch(1), filter(0), channel(0), input_shape(input_shape), units(units), prevLayer(nullptr) {}
 Layer::~Layer() {
-    delete this->E;
-    delete this->Y;
-    delete this->X;
+    free(this->E);
+    free(this->Y);
+    free(this->X);
 }
 
 FullyConnect::FullyConnect(int input_shape, int units) : Layer(input_shape, units) {}
 FullyConnect::~FullyConnect() {
-    delete this->W;
+    free(this->W);
 }
 
 int FullyConnect::configure(int batch, float learning_rate, Layer* prevLayer) {
@@ -94,7 +94,7 @@ Conv2D::Conv2D(int input_shape, int channel, int filter, int kernel_size, int st
     this->filter = filter;
 }
 Conv2D::~Conv2D() {
-    delete this->F;
+    free(this->F);
 }
 
 int Conv2D::configure(int batch, float learning_rate, Layer* prevLayer) {
@@ -199,7 +199,7 @@ MaxPooling2D::MaxPooling2D(int input_shape, int channel, int kernel_size, int st
     this->channel = channel;
 }
 MaxPooling2D::~MaxPooling2D() {
-    delete this->L;
+    free(this->L);
 }
 
 int MaxPooling2D::configure(int batch, float learning_rate, Layer* prevLayer) {
