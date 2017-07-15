@@ -69,6 +69,7 @@ Softmax::~Softmax() {}
 
 void Softmax::forward(float* x) {
     float* maxVal = (float*)malloc(sizeof(float)*this->batch);
+    #pragma omp parallel for
     for (int b = 0; b < this->batch; b++) {
         maxVal[b] = std::abs(x[b*this->input_shape]);
         for (int i = 1; i < this->input_shape; i++) {
@@ -79,6 +80,7 @@ void Softmax::forward(float* x) {
     }
 
     float tmp;
+    #pragma omp parallel for private(tmp)
     for (int b = 0; b < this->batch; b++) {
         tmp = 0;
         for (int i = 0; i < this->input_shape; i++) {
