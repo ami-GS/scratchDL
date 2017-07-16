@@ -6,6 +6,9 @@
 Network::Network(int layerNum, Layer** layers, Loss* loss) : layerNum(layerNum), layers(layers), loss(loss) {
 }
 Network::~Network() {
+    for (int i = 0; i < this->layerNum; i++) {
+        delete this->layers[i];
+    }
 };
 
 
