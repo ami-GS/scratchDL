@@ -22,6 +22,10 @@ int Activation::configure(int batch, float learning_rate, Layer* prevLayer) {
     return 1;
 }
 
+int Activation::configure_mkldnn(int batch, float learning_rate, Layer* prevLayer) {
+    return 1;
+}
+
 Sigmoid::Sigmoid() {}
 Sigmoid::~Sigmoid() {}
 

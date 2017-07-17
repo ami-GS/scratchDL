@@ -9,6 +9,7 @@ public:
     Activation();
     ~Activation();
     int configure(int batch, float learning_rate, Layer* prevLayer);
+    int configure_mkldnn(int batch, float learning_rate, Layer* prevLayer);
     virtual void forward(float* x) = 0;
     virtual void backward(float* e) = 0;
 };
