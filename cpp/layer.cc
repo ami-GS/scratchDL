@@ -19,6 +19,7 @@ int FullyConnect::configure(int batch, float learning_rate, Layer* prevLayer) {
     this->batch = batch;
     this->learning_rate = learning_rate;
     if (prevLayer != nullptr) {
+        prevLayer->nxtLayer = this;
         this->prevLayer = prevLayer;
     }
     this->Y = (float*)malloc(sizeof(float)*this->batch*this->units);
@@ -110,6 +111,10 @@ void FullyConnect::backward(float* e) {
 
 
 Conv2D::Conv2D(int input_shape, int channel, int filter, int kernel_size, int stride, int padding) : Layer(input_shape, 0), i_rowcol((int)std::sqrt((float)input_shape)), kernel_size(kernel_size), stride(stride), padding(padding) {
+    if (stride <= 0) {
+        // warning
+        this->stride = 1;
+    }
     this->u_rowcol = (this->i_rowcol + 2*padding - kernel_size)/stride + 1;
     this->units = this->u_rowcol*this->u_rowcol;
     this->channel = channel;
@@ -121,14 +126,11 @@ Conv2D::~Conv2D() {
 
 int Conv2D::configure(int batch, float learning_rate, Layer* prevLayer) {
     if (prevLayer != nullptr) {
+        prevLayer->nxtLayer = this;
         this->prevLayer = prevLayer;
     }
     this->batch = batch;
     this->learning_rate = learning_rate;
-    if (this->stride <= 0) {
-        // warning
-        this->stride = 1;
-    }
     this->X = (float*)malloc(sizeof(float)*this->batch*this->channel*this->input_shape);
     // for filter and data matmul
     //this->X = (float*)malloc(sizeof(float)*this->batch*this->channel*this->kernel_size*this->kernel_size*this->units*this->units);
@@ -145,6 +147,12 @@ int Conv2D::configure(int batch, float learning_rate, Layer* prevLayer) {
     }
 
 int Conv2D::configure_mkldnn(int batch, float learning_rate, Layer* prevLayer, mkldnn::engine backend) {
+    this->batch = batch;
+    this->learning_rate = learning_rate;
+    if (prevLayer != nullptr) {
+        prevLayer->nxtLayer = this;
+        this->prevLayer = prevLayer;
+    }
 
     return 1;
 }
@@ -218,6 +226,10 @@ void Conv2D::backward(float* e) {
 
 
 MaxPooling2D::MaxPooling2D(int input_shape, int channel, int kernel_size, int stride) : Layer(input_shape, 0), i_rowcol((int)std::sqrt((float)input_shape)), kernel_size(kernel_size), stride(stride) {
+    if (stride <= 0) {
+        // warning
+        this->stride = 1;
+    }
     this->u_rowcol = (this->i_rowcol - kernel_size)/stride + 1;
     this->units = this->u_rowcol*this->u_rowcol;
     this->channel = channel;
@@ -228,6 +240,7 @@ MaxPooling2D::~MaxPooling2D() {
 
 int MaxPooling2D::configure(int batch, float learning_rate, Layer* prevLayer) {
     if (prevLayer != nullptr) {
+        prevLayer->nxtLayer = this;
         this->prevLayer = prevLayer;
     }
     this->batch = batch;
@@ -239,6 +252,12 @@ int MaxPooling2D::configure(int batch, float learning_rate, Layer* prevLayer) {
 }
 
 int MaxPooling2D::configure_mkldnn(int batch, float learning_rate, Layer* prevLayer, mkldnn::engine backend) {
+    this->batch = batch;
+    this->learning_rate = learning_rate;
+    if (prevLayer != nullptr) {
+        prevLayer->nxtLayer = this;
+        this->prevLayer = prevLayer;
+    }
     return 1;
 }
 

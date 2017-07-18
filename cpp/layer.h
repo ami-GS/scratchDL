@@ -11,6 +11,7 @@ public:
     int input_shape;
     int units;
     Layer* prevLayer;
+    Layer* nxtLayer;
     float learning_rate;
     float* E;
     float* Y;
