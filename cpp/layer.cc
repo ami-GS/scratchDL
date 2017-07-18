@@ -37,12 +37,11 @@ int FullyConnect::configure(int batch, float learning_rate, Layer* prevLayer) {
     return 1;
 }
 
-int FullyConnect::configure_mkldnn(int batch, float learning_rate, Layer* prevLayer) {
-    auto cpu_engine = mkldnn::engine(mkldnn::engine::cpu, 0);
     mkldnn::memory::dims fc_src = {batch, this->input_shape};
     mkldnn::memory::dims fc_dst = {batch, this->units};
     mkldnn::memory::dims fc_weights = {this->input_shape, this->units};
 
+int FullyConnect::configure_mkldnn(int batch, float learning_rate, Layer* prevLayer, mkldnn::engine backend) {
     this->batch = batch;
     this->learning_rate = learning_rate;
     if (prevLayer != nullptr) {
@@ -54,7 +53,7 @@ int FullyConnect::configure_mkldnn(int batch, float learning_rate, Layer* prevLa
     auto fc_dst_md = mkldnn::memory::desc({fc_dst}, mkldnn::memory::data_type::f32, mkldnn::memory::format::any);
     auto fc_weights_md = mkldnn::memory::desc({fc_weights}, mkldnn::memory::data_type::f32, mkldnn::memory::format::any);
     auto fc_desc = mkldnn::inner_product_forward::desc(mkldnn::prop_kind::forward, fc_src_md, fc_weights_md, fc_dst_md);
-    auto fc_prim_desc = mkldnn::inner_product_forward::primitive_desc(fc_desc, cpu_engine);
+    auto fc_prim_desc = mkldnn::inner_product_forward::primitive_desc(fc_desc, backend);
 
     return 1;
 }
@@ -145,7 +144,8 @@ int Conv2D::configure(int batch, float learning_rate, Layer* prevLayer) {
         this->F[i] = rand(mt);
     }
 
-int Conv2D::configure_mkldnn(int batch, float learning_rate, Layer* prevLayer) {
+int Conv2D::configure_mkldnn(int batch, float learning_rate, Layer* prevLayer, mkldnn::engine backend) {
+
     return 1;
 }
 
@@ -238,7 +238,7 @@ int MaxPooling2D::configure(int batch, float learning_rate, Layer* prevLayer) {
     return 1;
 }
 
-int MaxPooling2D::configure_mkldnn(int batch, float learning_rate, Layer* prevLayer) {
+int MaxPooling2D::configure_mkldnn(int batch, float learning_rate, Layer* prevLayer, mkldnn::engine backend) {
     return 1;
 }
 

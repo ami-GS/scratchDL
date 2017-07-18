@@ -22,7 +22,7 @@ int Activation::configure(int batch, float learning_rate, Layer* prevLayer) {
     return 1;
 }
 
-int Activation::configure_mkldnn(int batch, float learning_rate, Layer* prevLayer) {
+int Activation::configure_mkldnn(int batch, float learning_rate, Layer* prevLayer, mkldnn::engine backend) {
     return 1;
 }
 
