@@ -20,6 +20,8 @@ public:
     virtual ~Layer();
     virtual int configure(int batch, float learning_rate, Layer* prevLayer) = 0;
     virtual int configure_mkldnn(int batch, float learning_rate, Layer* prevLayer, mkldnn::engine backend) = 0;
+    mkldnn::primitive prim;
+    mkldnn::memory dst_memory;
     virtual void forward(float* x) = 0;
     virtual void backward(float* e) = 0;
 };
