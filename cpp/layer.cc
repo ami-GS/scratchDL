@@ -68,6 +68,19 @@ int FullyConnect::configure_mkldnn(int batch, float learning_rate, Layer* prevLa
 
     this->prim = mkldnn::inner_product_forward(fc_prim_desc, fc_src_memory, fc_weights_memory, this->dst_memory);
 
+    //---------- for backward primitive -----------
+    auto fc_bwd_src_md = mkldnn::memory::desc({fc_src}, mkldnn::memory::data_type::f32, mkldnn::memory::format::any);
+    auto fc_diff_weights_md = mkldnn::memory::desc({fc_weights}, mkldnn::memory::data_type::f32, mkldnn::memory::format::any);
+    auto fc_diff_dst_md = mkldnn::memory::desc({fc_dst}, mkldnn::memory::data_type::f32, mkldnn::memory::format::any);
+
+    auto fc_bwd_weights_desc = mkldnn::inner_product_backward_weights::desc(fc_bwd_src_md, fc_diff_weights_md, fc_diff_dst_md);
+    auto fc_bwd_weights_pd = mkldnn::inner_product_backward_weights::primitive_desc(fc_bwd_weights_desc, backend, fc_prim_desc);
+
+    //auto fc_user_diff_weights_memory = mkldnn::memory::memory({{{fc_weights}, mkldnn::memory::data_type::f32, mkldnn::memory::format::any}, engine});
+    auto fc_diff_weights_memory = mkldnn::memory::memory(fc_bwd_weights_pd.diff_weights_primitive_desc());
+
+    this->prim_bw = mkldnn::inner_product_backward_weights(fc_bwd_weights_pd, fc_src_memory, this->nxtLayer->dst_memory, fc_diff_weights_memory);
+
     return 1;
 }
 
@@ -189,6 +202,20 @@ int Conv2D::configure_mkldnn(int batch, float learning_rate, Layer* prevLayer, m
     auto conv_weights_memory = mkldnn::memory::memory(conv_prim_desc.weights_primitive_desc());
 
     this->prim = mkldnn::convolution_forward(conv_prim_desc, conv_src_memory, conv_weights_memory, this->dst_memory);
+
+    //---------- for backward primitive -----------
+    auto conv_bwd_src_md = mkldnn::memory::desc({conv_src}, mkldnn::memory::data_type::f32, mkldnn::memory::format::any);
+    auto conv_diff_dst_md = mkldnn::memory::desc({conv_dst}, mkldnn::memory::data_type::f32, mkldnn::memory::format::any);
+    auto conv_diff_weights_md = mkldnn::memory::desc({conv_weights}, mkldnn::memory::data_type::f32, mkldnn::memory::format::any);
+
+    auto conv_bwd_weights_desc = mkldnn::convolution_backward_weights::desc(
+        mkldnn::convolution_direct, conv_bwd_src_md, conv_diff_weights_md,
+        conv_diff_dst_md, conv_strides, conv_padding, conv_padding, mkldnn::padding_kind::zero);
+    auto conv_bwd_weights_pd = mkldnn::convolution_backward_weights::primitive_desc(conv_bwd_weights_desc, backend, conv_prim_desc);
+
+    auto conv_diff_weights_memory = mkldnn::memory::memory(conv_bwd_weights_pd.diff_weights_primitive_desc());
+
+    this->prim_bw = mkldnn::convolution_backward_weights(conv_bwd_weights_pd, conv_src_memory, this->nxtLayer->dst_memory, conv_diff_weights_memory);
 
     return 1;
 }
@@ -313,6 +340,21 @@ int MaxPooling2D::configure_mkldnn(int batch, float learning_rate, Layer* prevLa
     auto pool_workspace_memory = mkldnn::memory::memory(pool_prim_desc.workspace_primitive_desc());
 
     this->prim = mkldnn::pooling_forward(pool_prim_desc, this->prevLayer->dst_memory, this->dst_memory, pool_workspace_memory);
+
+    //---------- for backward primitive -----------
+    auto pool_bwd_md = this->nxtLayer->dst_memory.get_primitive_desc().desc();
+    auto pool_diff_dst_md = mkldnn::memory::desc({pool_dst}, mkldnn::memory::data_type::f32, mkldnn::memory::format::any);
+
+    auto pool_bwd_desc = mkldnn::pooling_backward::desc(
+        mkldnn::pooling_max, pool_bwd_md, pool_diff_dst_md, pool_strides,
+        pool_kernel, pool_padding, pool_padding, mkldnn::padding_kind::zero);
+    auto pool_bwd_pd = mkldnn::pooling_backward::primitive_desc(pool_bwd_desc, backend, pool_prim_desc);
+
+    auto pool_diff_src_memory = mkldnn::memory::memory(pool_bwd_pd.diff_src_primitive_desc());
+    // TODO : the NULL should be replaced to data
+    auto pool_diff_dst_memory = mkldnn::memory::memory({{{pool_dst}, mkldnn::memory::f32, mkldnn::memory::format::nchw}, backend}, NULL);
+
+    this->prim_bw = mkldnn::pooling_backward(pool_bwd_pd, pool_diff_dst_memory, pool_workspace_memory, pool_diff_src_memory);
 
     return 1;
 }
