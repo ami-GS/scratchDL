@@ -1,8 +1,6 @@
 #ifndef CPP_LAYER_H_
 #define CPP_LAYER_H_
 
-#include "mkldnn.hpp"
-
 class Layer {
 public:
     int batch;
@@ -19,10 +17,6 @@ public:
     Layer(int input_shape, int units);
     virtual ~Layer();
     virtual int configure(int batch, float learning_rate, Layer* prevLayer) = 0;
-    virtual int configure_mkldnn(int batch, float learning_rate, Layer* prevLayer, mkldnn::engine backend) = 0;
-    mkldnn::primitive prim;
-    mkldnn::primitive prim_bw;
-    mkldnn::memory dst_memory;
     virtual void forward(float* x) = 0;
     virtual void backward(float* e) = 0;
 };
@@ -34,7 +28,6 @@ public:
     FullyConnect(int input_shape, int units);
     ~FullyConnect();
     int configure(int batch, float learning_rate, Layer* prevLayer);
-    int configure_mkldnn(int batch, float learning_rate, Layer* prevLayer, mkldnn::engine backend);
     void forward(float* x);
     void backward(float* e);
 };
@@ -50,7 +43,6 @@ public:
     Conv2D(int input_shape, int channel, int filter, int kernel_size, int stride, int padding);
     ~Conv2D();
     int configure(int batch, float learning_rate, Layer* prevLayer);
-    int configure_mkldnn(int batch, float learning_rate, Layer* prevLayer, mkldnn::engine backend);
     void forward(float* x);
     void backward(float* e);
 };
@@ -65,7 +57,6 @@ public:
     MaxPooling2D(int input_shape, int channel, int kernel_size, int stride);
     ~MaxPooling2D();
     int configure(int batch, float learning_rate, Layer* prevLayer);
-    int configure_mkldnn(int batch, float learning_rate, Layer* prevLayer, mkldnn::engine backend);
     void forward(float* x);
     void backward(float* e);
 };
