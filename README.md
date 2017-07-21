@@ -7,6 +7,6 @@ Deep learning implementation
 - python
   - recurrent
 - C++
-  - openMP enabled
-  - MKL version
+  - MKL version (really difficult due to lack of documents)
+  - OpenCL
   - python interface
