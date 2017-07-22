@@ -4,7 +4,7 @@
 
 Loss::Loss() {}
 Loss::~Loss() {
-    delete this->D;
+    free(this->D);
 }
 
 MSE::MSE() {}
