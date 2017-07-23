@@ -1,5 +1,4 @@
 #include "layer.h"
-#include "mkldnn.hpp"
 #include <stdlib.h>
 #include <random>
 
@@ -35,52 +34,6 @@ int FullyConnect::configure(int batch, float learning_rate, Layer* prevLayer) {
             this->W[iu] = rand(mt);
     }
     *this->B = rand(mt);
-    return 1;
-}
-
-int FullyConnect::configure_mkldnn(int batch, float learning_rate, Layer* prevLayer, mkldnn::engine backend) {
-    this->batch = batch;
-    this->learning_rate = learning_rate;
-    if (prevLayer != nullptr) {
-        prevLayer->nxtLayer = this;
-        this->prevLayer = prevLayer;
-    }
-
-    mkldnn::memory::dims fc_src = {batch, this->input_shape};
-    mkldnn::memory::dims fc_dst = {batch, this->units};
-    mkldnn::memory::dims fc_weights = {this->input_shape, this->units};
-
-    auto fc_src_md = mkldnn::memory::desc({fc_src}, mkldnn::memory::data_type::f32, mkldnn::memory::format::any);
-    //float* fc_src_memory = (float*)malloc(sizeof(float)*this->batch*this->input_shape);
-
-    auto fc_dst_md = mkldnn::memory::desc({fc_dst}, mkldnn::memory::data_type::f32, mkldnn::memory::format::any);
-    //float* fc_dst_memory = (float*)malloc(sizeof(float)*this->batch*this->units);
-
-    auto fc_weights_md = mkldnn::memory::desc({fc_weights}, mkldnn::memory::data_type::f32, mkldnn::memory::format::any);
-    //float* fc_weights_memory = (float*)malloc(sizeof(float)*this->input_shape*this->units);
-
-    auto fc_desc = mkldnn::inner_product_forward::desc(mkldnn::prop_kind::forward, fc_src_md, fc_weights_md, fc_dst_md);
-    auto fc_prim_desc = mkldnn::inner_product_forward::primitive_desc(fc_desc, backend);
-
-    auto fc_src_memory = mkldnn::memory::memory(fc_prim_desc.src_primitive_desc());
-    this->dst_memory = mkldnn::memory::memory(fc_prim_desc.dst_primitive_desc());
-    auto fc_weights_memory = mkldnn::memory::memory(fc_prim_desc.weights_primitive_desc());
-
-    this->prim = mkldnn::inner_product_forward(fc_prim_desc, fc_src_memory, fc_weights_memory, this->dst_memory);
-
-    //---------- for backward primitive -----------
-    auto fc_bwd_src_md = mkldnn::memory::desc({fc_src}, mkldnn::memory::data_type::f32, mkldnn::memory::format::any);
-    auto fc_diff_weights_md = mkldnn::memory::desc({fc_weights}, mkldnn::memory::data_type::f32, mkldnn::memory::format::any);
-    auto fc_diff_dst_md = mkldnn::memory::desc({fc_dst}, mkldnn::memory::data_type::f32, mkldnn::memory::format::any);
-
-    auto fc_bwd_weights_desc = mkldnn::inner_product_backward_weights::desc(fc_bwd_src_md, fc_diff_weights_md, fc_diff_dst_md);
-    auto fc_bwd_weights_pd = mkldnn::inner_product_backward_weights::primitive_desc(fc_bwd_weights_desc, backend, fc_prim_desc);
-
-    //auto fc_user_diff_weights_memory = mkldnn::memory::memory({{{fc_weights}, mkldnn::memory::data_type::f32, mkldnn::memory::format::any}, engine});
-    auto fc_diff_weights_memory = mkldnn::memory::memory(fc_bwd_weights_pd.diff_weights_primitive_desc());
-
-    this->prim_bw = mkldnn::inner_product_backward_weights(fc_bwd_weights_pd, fc_src_memory, this->nxtLayer->dst_memory, fc_diff_weights_memory);
-
     return 1;
 }
 
@@ -170,52 +123,6 @@ int Conv2D::configure(int batch, float learning_rate, Layer* prevLayer) {
     for (int i = 0; i < this->filter*this->kernel_size*this->kernel_size; i++) {
         this->F[i] = rand(mt);
     }
-
-int Conv2D::configure_mkldnn(int batch, float learning_rate, Layer* prevLayer, mkldnn::engine backend) {
-    this->batch = batch;
-    this->learning_rate = learning_rate;
-    if (prevLayer != nullptr) {
-        prevLayer->nxtLayer = this;
-        this->prevLayer = prevLayer;
-    }
-
-    mkldnn::memory::dims conv_src = {batch, this->channel, this->i_rowcol, this->i_rowcol};
-    mkldnn::memory::dims conv_dst = {batch, this->filter, this->u_rowcol, this->u_rowcol};
-    mkldnn::memory::dims conv_weights = {this->filter, this->kernel_size, this->kernel_size};
-    mkldnn::memory::dims conv_strides = {this->stride, this->stride};
-    mkldnn::memory::dims conv_padding = {this->padding, this->padding};
-
-    auto conv_src_md = mkldnn::memory::desc({conv_src}, mkldnn::memory::data_type::f32, mkldnn::memory::format::any);
-    auto conv_dst_md = mkldnn::memory::desc({conv_dst}, mkldnn::memory::data_type::f32, mkldnn::memory::format::any);
-    auto conv_weights_md = mkldnn::memory::desc({conv_weights}, mkldnn::memory::data_type::f32, mkldnn::memory::format::any);
-
-    auto conv_desc = mkldnn::convolution_forward::desc(mkldnn::prop_kind::forward,
-                                                               mkldnn::convolution_direct,
-                                                               conv_src_md, conv_weights_md,
-                                                               conv_dst_md, conv_strides,
-                                                               conv_padding, conv_padding,
-                                                               mkldnn::padding_kind::zero);
-    auto conv_prim_desc = mkldnn::convolution_forward::primitive_desc(conv_desc, backend);
-
-    auto conv_src_memory = mkldnn::memory::memory(conv_prim_desc.src_primitive_desc());
-    this->dst_memory = mkldnn::memory::memory(conv_prim_desc.dst_primitive_desc());
-    auto conv_weights_memory = mkldnn::memory::memory(conv_prim_desc.weights_primitive_desc());
-
-    this->prim = mkldnn::convolution_forward(conv_prim_desc, conv_src_memory, conv_weights_memory, this->dst_memory);
-
-    //---------- for backward primitive -----------
-    auto conv_bwd_src_md = mkldnn::memory::desc({conv_src}, mkldnn::memory::data_type::f32, mkldnn::memory::format::any);
-    auto conv_diff_dst_md = mkldnn::memory::desc({conv_dst}, mkldnn::memory::data_type::f32, mkldnn::memory::format::any);
-    auto conv_diff_weights_md = mkldnn::memory::desc({conv_weights}, mkldnn::memory::data_type::f32, mkldnn::memory::format::any);
-
-    auto conv_bwd_weights_desc = mkldnn::convolution_backward_weights::desc(
-        mkldnn::convolution_direct, conv_bwd_src_md, conv_diff_weights_md,
-        conv_diff_dst_md, conv_strides, conv_padding, conv_padding, mkldnn::padding_kind::zero);
-    auto conv_bwd_weights_pd = mkldnn::convolution_backward_weights::primitive_desc(conv_bwd_weights_desc, backend, conv_prim_desc);
-
-    auto conv_diff_weights_memory = mkldnn::memory::memory(conv_bwd_weights_pd.diff_weights_primitive_desc());
-
-    this->prim_bw = mkldnn::convolution_backward_weights(conv_bwd_weights_pd, conv_src_memory, this->nxtLayer->dst_memory, conv_diff_weights_memory);
 
     return 1;
 }
@@ -314,50 +221,6 @@ int MaxPooling2D::configure(int batch, float learning_rate, Layer* prevLayer) {
     return 1;
 }
 
-int MaxPooling2D::configure_mkldnn(int batch, float learning_rate, Layer* prevLayer, mkldnn::engine backend) {
-    this->batch = batch;
-    this->learning_rate = learning_rate;
-    if (prevLayer != nullptr) {
-        prevLayer->nxtLayer = this;
-        this->prevLayer = prevLayer;
-    }
-
-    mkldnn::memory::dims pool_dst = {batch, this->filter, this->u_rowcol, this->u_rowcol};
-    mkldnn::memory::dims pool_kernel = {this->kernel_size, this->kernel_size};
-    mkldnn::memory::dims pool_strides = {this->stride, this->stride};
-    mkldnn::memory::dims pool_padding = {0, 0}; // need padding
-
-    auto pool_dst_md = mkldnn::memory::desc({pool_dst}, mkldnn::memory::data_type::f32, mkldnn::memory::format::any);
-    auto pool_desc = mkldnn::pooling_forward::desc(mkldnn::prop_kind::forward,
-                                                   mkldnn::pooling_max,
-                                                   this->prevLayer->dst_memory.get_primitive_desc().desc(),
-                                                   pool_dst_md, pool_strides, pool_kernel,
-                                                   pool_padding, pool_padding,
-                                                   mkldnn::padding_kind::zero);
-    auto pool_prim_desc = mkldnn::pooling_forward::primitive_desc(pool_desc, backend);
-
-    this->dst_memory = mkldnn::memory::memory(pool_prim_desc.dst_primitive_desc());
-    auto pool_workspace_memory = mkldnn::memory::memory(pool_prim_desc.workspace_primitive_desc());
-
-    this->prim = mkldnn::pooling_forward(pool_prim_desc, this->prevLayer->dst_memory, this->dst_memory, pool_workspace_memory);
-
-    //---------- for backward primitive -----------
-    auto pool_bwd_md = this->nxtLayer->dst_memory.get_primitive_desc().desc();
-    auto pool_diff_dst_md = mkldnn::memory::desc({pool_dst}, mkldnn::memory::data_type::f32, mkldnn::memory::format::any);
-
-    auto pool_bwd_desc = mkldnn::pooling_backward::desc(
-        mkldnn::pooling_max, pool_bwd_md, pool_diff_dst_md, pool_strides,
-        pool_kernel, pool_padding, pool_padding, mkldnn::padding_kind::zero);
-    auto pool_bwd_pd = mkldnn::pooling_backward::primitive_desc(pool_bwd_desc, backend, pool_prim_desc);
-
-    auto pool_diff_src_memory = mkldnn::memory::memory(pool_bwd_pd.diff_src_primitive_desc());
-    // TODO : the NULL should be replaced to data
-    auto pool_diff_dst_memory = mkldnn::memory::memory({{{pool_dst}, mkldnn::memory::f32, mkldnn::memory::format::nchw}, backend}, NULL);
-
-    this->prim_bw = mkldnn::pooling_backward(pool_bwd_pd, pool_diff_dst_memory, pool_workspace_memory, pool_diff_src_memory);
-
-    return 1;
-}
 
 void MaxPooling2D::forward(float* x) {
     float tmp;
