@@ -4,6 +4,7 @@
 class Layer {
 public:
     int batch;
+    float batch_inv;
     int filter;
     int channel;
     int input_shape;

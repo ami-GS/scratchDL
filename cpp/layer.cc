@@ -11,6 +11,7 @@ Layer::~Layer() {
 
 int Layer::configure(int batch, float learning_rate, Layer* prevLayer) {
     this->batch = batch;
+    this->batch_inv = 1/batch;
     this->learning_rate = learning_rate;
     if (prevLayer != nullptr) {
         prevLayer->nxtLayer = this;
@@ -78,14 +79,14 @@ void FullyConnect::backward(float* e) {
         for (int i = 0; i < this->input_shape; i++) {
             for (int u = 0; u < this->units; u++) {
                 // TODO : not good for division in each calc
-                this->W[i*this->units + u] -= (this->learning_rate * this->X[b*this->input_shape + i] * e[b*this->units + u])/this->batch;
+                this->W[i*this->units + u] -= (this->learning_rate * this->X[b*this->input_shape + i] * e[b*this->units + u])*this->batch_inv;
             }
         }
     }
     #pragma omp  parallel for
     for (int b = 0; b < this->batch; b++) {
         for (int u = 0; u < this->units; u++) {
-            *this->B -= this->learning_rate * e[b*this->units + u]/this->batch;
+            *this->B -= this->learning_rate * e[b*this->units + u]*this->batch_inv;
         }
     }
 
@@ -141,7 +142,8 @@ void Conv2D::forward(float* x) {
                     for (int co = 0; co + this->kernel_size < this->i_rowcol; co += this->stride) {
                         for (int ki = 0; ki < this->kernel_size; ki++) {
                             for (int kj = 0; kj < this->kernel_size; kj++) {
-                                this->Y[b*this->units*this->filter+f*this->units+ro*this->i_rowcol+co] += this->X[b*this->input_shape*this->channel+c*this->input_shape+ro*this->i_rowcol+co+ki*this->i_rowcol+kj] * this->F[f*this->kernel_size*this->kernel_size+ki*this->kernel_size+kj];
+                                //this->Y[b*this->units*this->filter+f*this->units+ro*this->i_rowcol+co] += this->X[b*this->input_shape*this->channel+c*this->input_shape+ro*this->i_rowcol+co+ki*this->i_rowcol+kj] * this->F[f*this->kernel_size*this->kernel_size+ki*this->kernel_size+kj];
+                                this->Y[By+Fy+RO+co] += this->X[Bx+C+RO+co+ki*this->i_rowcol+kj] * this->F[Ff+ki*this->kernel_size+kj];
                             }
                         }
                     }
@@ -183,7 +185,7 @@ void Conv2D::backward(float* e) {
                     for (int co = 0; co < this->u_rowcol; co++) {
                         for (int ki = 0; ki < this->kernel_size; ki++) {
                             for (int kj = 0; kj < this->kernel_size; kj++) {
-                                this->F[f*this->kernel_size*this->kernel_size+ki*this->kernel_size+kj] -= (this->learning_rate * this->X[b*this->channel*this->input_shape+c*this->input_shape+ro*this->i_rowcol+co+ki*this->i_rowcol+kj] * e[b*this->filter*this->units+f*this->units+ro*this->u_rowcol+co])/this->batch;
+                                this->F[f*this->kernel_size*this->kernel_size+ki*this->kernel_size+kj] -= (this->learning_rate * this->X[b*this->channel*this->input_shape+c*this->input_shape+ro*this->i_rowcol+co+ki*this->i_rowcol+kj] * e[b*this->filter*this->units+f*this->units+ro*this->u_rowcol+co])*this->batch_inv;
                             }
                         }
                     }
