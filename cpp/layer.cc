@@ -9,18 +9,23 @@ Layer::~Layer() {
     free(this->X);
 }
 
-FullyConnect::FullyConnect(int input_shape, int units) : Layer(input_shape, units) {}
-FullyConnect::~FullyConnect() {
-    free(this->W);
-}
-
-int FullyConnect::configure(int batch, float learning_rate, Layer* prevLayer) {
+int Layer::configure(int batch, float learning_rate, Layer* prevLayer) {
     this->batch = batch;
     this->learning_rate = learning_rate;
     if (prevLayer != nullptr) {
         prevLayer->nxtLayer = this;
         this->prevLayer = prevLayer;
     }
+    return 1;
+}
+
+FullyConnect::FullyConnect(int input_shape, int units) : Layer(input_shape, units) {}
+FullyConnect::~FullyConnect() {
+    free(this->W);
+}
+
+int FullyConnect::configure(int batch, float learning_rate, Layer* prevLayer) {
+    Layer::configure(batch, learning_rate, prevLayer);
     this->Y = (float*)malloc(sizeof(float)*this->batch*this->units);
     this->W = (float*)malloc(sizeof(float)*this->input_shape*this->units);
     this->B = (float*)malloc(sizeof(float));
@@ -103,12 +108,7 @@ Conv2D::~Conv2D() {
 }
 
 int Conv2D::configure(int batch, float learning_rate, Layer* prevLayer) {
-    if (prevLayer != nullptr) {
-        prevLayer->nxtLayer = this;
-        this->prevLayer = prevLayer;
-    }
-    this->batch = batch;
-    this->learning_rate = learning_rate;
+    Layer::configure(batch, learning_rate, prevLayer);
     this->X = (float*)malloc(sizeof(float)*this->batch*this->channel*this->input_shape);
     // for filter and data matmul
     //this->X = (float*)malloc(sizeof(float)*this->batch*this->channel*this->kernel_size*this->kernel_size*this->units*this->units);
@@ -209,11 +209,7 @@ MaxPooling2D::~MaxPooling2D() {
 }
 
 int MaxPooling2D::configure(int batch, float learning_rate, Layer* prevLayer) {
-    if (prevLayer != nullptr) {
-        prevLayer->nxtLayer = this;
-        this->prevLayer = prevLayer;
-    }
-    this->batch = batch;
+    Layer::configure(batch, learning_rate, prevLayer);
     this->learning_rate = learning_rate;
     this->Y = (float*)malloc(sizeof(float)*this->batch*this->channel*this->units);
     this->L = (int*)malloc(sizeof(int)*this->batch*this->channel*this->units);

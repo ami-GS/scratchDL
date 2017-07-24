@@ -16,7 +16,7 @@ public:
     float* X;
     Layer(int input_shape, int units);
     virtual ~Layer();
-    virtual int configure(int batch, float learning_rate, Layer* prevLayer) = 0;
+    virtual int configure(int batch, float learning_rate, Layer* prevLayer);
     virtual void forward(float* x) = 0;
     virtual void backward(float* e) = 0;
 };
