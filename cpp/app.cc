@@ -4,33 +4,36 @@
 #include "network.h"
 #include <iostream>
 #include <fstream>
-#define CLASS 10
+#define CLASS   10
+#define NUMIMG  10000
+#define IMGSZ   3072
+#define NUMDSET 5
 
-int all_label[10000];
-int one_hot_label[4*10000*CLASS];
-float all_data_float[4*3072*10000];
+int all_label[NUMIMG];
+int one_hot_label[NUMDSET*NUMIMG*CLASS];
+float all_data_float[NUMDSET*IMGSZ*NUMIMG];
 float learning_rate = 0.001;
-int batch = 10;
+int batch = 20;
 int epoch = 2;
 
 int main() {
     // read data
-    char tmp_data[3072];
+    char tmp_data[IMGSZ];
     char tmp_label;
     std::string f_prefix("../data/cifar10/data_batch_");
     std::string f_suffix(".bin");
     for (int b = 1; b < 6; b++) {
         std::ifstream infile(f_prefix + std::to_string(b) + f_suffix);
-        for (int i = 0; i < 10000; i++) {
+        for (int i = 0; i < NUMIMG; i++) {
             infile.read(&tmp_label, 1);
             all_label[i] = (int)tmp_label;
             for (int j = 0; j < 10; j++) {
-                one_hot_label[b*10000 + i*CLASS + j] = 0;
+                one_hot_label[b*NUMIMG + i*CLASS + j] = 0;
             }
-            one_hot_label[b*10000+ i*CLASS + (int)tmp_label] = 1;
-            infile.read(tmp_data, 3072);
-            for (int j = 0; j < 3072; j++) {
-                all_data_float[b*10000 + i*3072+j] = ((float)(unsigned char)tmp_data[j])/255;
+            one_hot_label[b*NUMIMG+ i*CLASS + (int)tmp_label] = 1;
+            infile.read(tmp_data, IMGSZ);
+            for (int j = 0; j < IMGSZ; j++) {
+                all_data_float[b*NUMIMG + i*IMGSZ+j] = ((float)(unsigned char)tmp_data[j])/255;
             }
         }
     }
@@ -51,8 +54,8 @@ int main() {
 
     // run
     for (int e = 0; e < epoch; e++) {
-        for (int i = 0; i < 40000; i += batch) {
-            float* data = &all_data_float[i*3072];
+        for (int i = 0; i < NUMDSET*NUMIMG; i += batch) {
+            float* data = &all_data_float[i*IMGSZ];
             int* label = &one_hot_label[i*CLASS];
             network->train(data, label);
             if (i % 800 == 0) {
