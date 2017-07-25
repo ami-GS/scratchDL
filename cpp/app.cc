@@ -56,7 +56,7 @@ int main() {
             int* label = &one_hot_label[i*CLASS];
             network->train(data, label);
             if (i % 800 == 0) {
-                float err = loss->error(data, &one_hot_label[i*CLASS]);
+                float err = loss->error(network->layers[6]->Y, label);
                 std::cout << "loop " << i << " " << err << std::endl;
             }
         }
