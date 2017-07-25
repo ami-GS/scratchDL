@@ -142,8 +142,7 @@ void Conv2D::forward(float* x) {
                     for (int co = 0; co + this->kernel_size < this->i_rowcol; co += this->stride) {
                         for (int ki = 0; ki < this->kernel_size; ki++) {
                             for (int kj = 0; kj < this->kernel_size; kj++) {
-                                //this->Y[b*this->units*this->filter+f*this->units+ro*this->i_rowcol+co] += this->X[b*this->input_shape*this->channel+c*this->input_shape+ro*this->i_rowcol+co+ki*this->i_rowcol+kj] * this->F[f*this->kernel_size*this->kernel_size+ki*this->kernel_size+kj];
-                                this->Y[By+Fy+RO+co] += this->X[Bx+C+RO+co+ki*this->i_rowcol+kj] * this->F[Ff+ki*this->kernel_size+kj];
+                                this->Y[b*this->units*this->filter+f*this->units+ro*this->i_rowcol+co] += this->X[b*this->input_shape*this->channel+c*this->input_shape+ro*this->i_rowcol+co+ki*this->i_rowcol+kj] * this->F[f*this->kernel_size*this->kernel_size+ki*this->kernel_size+kj];
                             }
                         }
                     }
