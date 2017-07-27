@@ -218,7 +218,19 @@ class LSTM(Layer):
         self.X = np.zeros((self.batch, self.input_shape), dtype=self.dtype)
 
     def forward(self, x):
-     	 pass
+        self.X[:] = x
+
+        self.I = self.gate_act["I"].forward(self.X.dot(self.Wxi) + self.H_1.dot(self.Whi) + self.Bi)
+        self.F = self.gate_act["F"].forward(self.X.dot(self.Wxf) + self.H_1.dot(self.Whf) + self.Bf)
+        self.U = self.tanh["U"].forward(self.X.dot(self.Wxu) + self.H_1.dot(self.Whu) + self.Bu)
+        self.O = self.gate_act["O"].forward(self.X.dot(self.Wxo) + self.H_1.dot(self.Who) + self.Bo)
+        self.C = self.C_1 * self.F + self.I * self.U
+        self.Ctanh = self.tanh["C"].forward(self.C)
+        self.H = self.Ctanh * self.O
+
+        self.C_1 = self.C
+        self.H_1 = self.H
+        return self.H
 
     def backward(self, e):
      	 pass
