@@ -178,6 +178,24 @@ class FullyConnect(Layer):
             err_delta = err_delta.reshape(self.original_shape)
         return err_delta
 
+from activation import Sigmoid, Tanh
+class LSTM(Layer):
+    def __init__(self, units=0, input_shape=0, dtype=np.float32, gate_act=Sigmoid):
+        super(LSTM, self).__init__(input_shape, units)
+        self.gate_act = {"I":gate_act(), "F":gate_act(), "O":gate_act()}
+        self.tanh = {"U":Tanh(), "C":Tanh()}
+        self.Wxi = np.random.uniform(-1, 1, (input_shape, units)).astype(dtype)
+        self.Wxf = np.random.uniform(-1, 1, (input_shape, units)).astype(dtype)
+        self.Wxu = np.random.uniform(-1, 1, (input_shape, units)).astype(dtype)
+        self.Wxo = np.random.uniform(-1, 1, (input_shape, units)).astype(dtype)
+        self.Whi = np.random.uniform(-1, 1, (units, units)).astype(dtype)
+        self.Whf = np.random.uniform(-1, 1, (units, units)).astype(dtype)
+        self.Whu = np.random.uniform(-1, 1, (units, units)).astype(dtype)
+        self.Who = np.random.uniform(-1, 1, (units, units)).astype(dtype)
+        self.Bi = np.random.uniform(-1, 1, 1).astype(dtype)
+        self.Bf = np.random.uniform(-1, 1, 1).astype(dtype)
+        self.Bu = np.random.uniform(-1, 1, 1).astype(dtype)
+        self.Bo = np.random.uniform(-1, 1, 1).astype(dtype)
 class BatchNorm(Layer):
     def __init__(self, units=0, input_shape=0, dtype=np.float32):
         super(BatchNorm, self).__init__(input_shape, units)
