@@ -196,6 +196,16 @@ class LSTM(Layer):
         self.Bf = np.random.uniform(-1, 1, 1).astype(dtype)
         self.Bu = np.random.uniform(-1, 1, 1).astype(dtype)
         self.Bo = np.random.uniform(-1, 1, 1).astype(dtype)
+
+    def configure(self, data_shape, phase, prevLayer = None):
+     	 pass
+
+    def forward(self, x):
+     	 pass
+
+    def backward(self, e):
+     	 pass
+
 class BatchNorm(Layer):
     def __init__(self, units=0, input_shape=0, dtype=np.float32):
         super(BatchNorm, self).__init__(input_shape, units)
