@@ -1,5 +1,6 @@
 import numpy as np
 import math
+import copy
 
 class Layer(object):
     def __init__(self, input_shape = None, units = None):
@@ -198,7 +199,23 @@ class LSTM(Layer):
         self.Bo = np.random.uniform(-1, 1, 1).astype(dtype)
 
     def configure(self, data_shape, phase, prevLayer = None):
-     	 pass
+        self.batch = data_shape[0]
+        for k in self.gate_act:
+            self.gate_act[k].configure(data_shape, phase, prevLayer)
+        for k in self.tanh:
+            self.tanh[k].configure(data_shape, phase, prevLayer)
+        self.optimizers = []
+        for i in range(8):
+            self.optimizers.append(copy.deepcopy(self.optimizer))
+        self.C = np.zeros((self.batch, self.units))
+        self.C_1 = np.zeros((self.batch, self.units))
+        self.H = np.zeros((self.batch, self.units))
+        self.H_1 = np.zeros((self.batch, self.units))
+        self.I = np.zeros((self.batch, self.units))
+        self.F = np.zeros((self.batch, self.units))
+        self.U = np.zeros((self.batch, self.units))
+        self.O = np.zeros((self.batch, self.units))
+        self.X = np.zeros((self.batch, self.input_shape), dtype=self.dtype)
 
     def forward(self, x):
      	 pass
