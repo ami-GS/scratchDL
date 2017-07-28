@@ -233,7 +233,32 @@ class LSTM(Layer):
         return self.H
 
     def backward(self, e):
-     	 pass
+        delC = self.tanh["C"].backward(e)*self.O
+        delC_1 = delC * self.F
+        delO = self.gate_act["O"].backward(e)*self.Ctanh
+        delI = self.gate_act["I"].backward(delC)*self.U
+        delU = self.tanh["U"].backward(delC)*self.I
+        delF = self.gate_act["F"].backward(delC)*self.C_1
+        delH = delI.dot(self.Whi.T) + delO.dot(self.Who.T) + delU.dot(self.Whu.T) + delF.dot(self.Whf.T)
+
+        #update
+        np.subtract(self.Wxi, self.optimizers[0](np.sum(np.einsum("bi,bj->bij", self.X, self.learning_rate*delI), axis=0))/self.batch, self.Wxi)
+        np.subtract(self.Wxo, self.optimizers[1](np.sum(np.einsum("bi,bj->bij", self.X, self.learning_rate*delO), axis=0))/self.batch, self.Wxo)
+        np.subtract(self.Wxu, self.optimizers[2](np.sum(np.einsum("bi,bj->bij", self.X, self.learning_rate*delU), axis=0))/self.batch, self.Wxu)
+        np.subtract(self.Wxf, self.optimizers[3](np.sum(np.einsum("bi,bj->bij", self.X, self.learning_rate*delF), axis=0))/self.batch, self.Wxf)
+
+        np.subtract(self.Whi, self.optimizers[4](np.sum(np.einsum("bi,bj->bij", self.H_1, self.learning_rate*delI), axis=0))/self.batch, self.Whi)
+        np.subtract(self.Who, self.optimizers[5](np.sum(np.einsum("bi,bj->bij", self.H_1, self.learning_rate*delO), axis=0))/self.batch, self.Who)
+        np.subtract(self.Whu, self.optimizers[6](np.sum(np.einsum("bi,bj->bij", self.H_1, self.learning_rate*delU), axis=0))/self.batch, self.Whu)
+        np.subtract(self.Whf, self.optimizers[7](np.sum(np.einsum("bi,bj->bij", self.H_1, self.learning_rate*delF), axis=0))/self.batch, self.Whf)
+
+        self.Bi -= np.sum(self.learning_rate * delI)
+        self.Bo -= np.sum(self.learning_rate * delO)
+        self.Bu -= np.sum(self.learning_rate * delU)
+        self.Bf -= np.sum(self.learning_rate * delF)
+
+        return delH
+
 
 class BatchNorm(Layer):
     def __init__(self, units=0, input_shape=0, dtype=np.float32):
