@@ -185,18 +185,13 @@ class LSTM(Layer):
         super(LSTM, self).__init__(input_shape, units)
         self.gate_act = {"I":gate_act(), "F":gate_act(), "O":gate_act()}
         self.tanh = {"U":Tanh(), "C":Tanh()}
-        self.Wxi = np.random.uniform(-1, 1, (input_shape, units)).astype(dtype)
-        self.Wxf = np.random.uniform(-1, 1, (input_shape, units)).astype(dtype)
-        self.Wxu = np.random.uniform(-1, 1, (input_shape, units)).astype(dtype)
-        self.Wxo = np.random.uniform(-1, 1, (input_shape, units)).astype(dtype)
-        self.Whi = np.random.uniform(-1, 1, (units, units)).astype(dtype)
-        self.Whf = np.random.uniform(-1, 1, (units, units)).astype(dtype)
-        self.Whu = np.random.uniform(-1, 1, (units, units)).astype(dtype)
-        self.Who = np.random.uniform(-1, 1, (units, units)).astype(dtype)
-        self.Bi = np.random.uniform(-1, 1, 1).astype(dtype)
-        self.Bf = np.random.uniform(-1, 1, 1).astype(dtype)
-        self.Bu = np.random.uniform(-1, 1, 1).astype(dtype)
-        self.Bo = np.random.uniform(-1, 1, 1).astype(dtype)
+        self.Wx = {"I":None, "F":None, "U":None, "O":None}
+        self.Wh = {"I":None, "F":None, "U":None, "O":None}
+        self.B = {"I":None, "F":None, "U":None, "O":None}
+        for k in ["I", "F", "U", "O"]:
+            self.Wx[k] = np.random.uniform(-1, 1, (input_shape, units)).astype(dtype)
+            self.Wh[k] = np.random.uniform(-1, 1, (units, units)).astype(dtype)
+            self.B[k] = np.random.uniform(-1, 1, 1).astype(dtype)
 
     def configure(self, data_shape, phase, prevLayer = None):
         self.batch = data_shape[0]
@@ -207,57 +202,44 @@ class LSTM(Layer):
         self.optimizers = []
         for i in range(8):
             self.optimizers.append(copy.deepcopy(self.optimizer))
-        self.C = np.zeros((self.batch, self.units))
-        self.C_1 = np.zeros((self.batch, self.units))
-        self.H = np.zeros((self.batch, self.units))
-        self.H_1 = np.zeros((self.batch, self.units))
-        self.I = np.zeros((self.batch, self.units))
-        self.F = np.zeros((self.batch, self.units))
-        self.U = np.zeros((self.batch, self.units))
-        self.O = np.zeros((self.batch, self.units))
+        self.buff = {"C":None, "C_1":None, "H":None, "H_1":None, "I":None, "F":None, "U":None, "O":None, "X":None}
+        for k in self.buff:
+            self.buff[k] = np.zeros((self.batch, self.units))
         self.X = np.zeros((self.batch, self.input_shape), dtype=self.dtype)
 
     def forward(self, x):
         self.X[:] = x
 
-        self.I = self.gate_act["I"].forward(self.X.dot(self.Wxi) + self.H_1.dot(self.Whi) + self.Bi)
-        self.F = self.gate_act["F"].forward(self.X.dot(self.Wxf) + self.H_1.dot(self.Whf) + self.Bf)
-        self.U = self.tanh["U"].forward(self.X.dot(self.Wxu) + self.H_1.dot(self.Whu) + self.Bu)
-        self.O = self.gate_act["O"].forward(self.X.dot(self.Wxo) + self.H_1.dot(self.Who) + self.Bo)
-        self.C = self.C_1 * self.F + self.I * self.U
-        self.Ctanh = self.tanh["C"].forward(self.C)
-        self.H = self.Ctanh * self.O
-
-        self.C_1 = self.C
-        self.H_1 = self.H
-        return self.H
+        for k in ["I", "F", "O"]:
+            self.buff[k] = self.gate_act[k].forward(self.X.dot(self.Wx[k]) + self.buff["H_1"].dot(self.Wh[k]) + self.B[k])
+        self.buff["U"] = self.tanh["U"].forward(self.X.dot(self.Wx["U"]) + self.buff["H_1"].dot(self.Wh["U"]) + self.B["U"])
+        self.Ctanh = self.tanh["C"].forward(self.buff["C"])
+        self.buff["H"] = self.Ctanh * self.buff["O"]
+        self.buff["C_1"] = self.buff["C"]
+        self.buff["H_1"] = self.buff["H"]
+        return self.buff["H"]
 
     def backward(self, e):
-        delC = self.tanh["C"].backward(e)*self.O
-        delC_1 = delC * self.F
-        delO = self.gate_act["O"].backward(e)*self.Ctanh
-        delI = self.gate_act["I"].backward(delC)*self.U
-        delU = self.tanh["U"].backward(delC)*self.I
-        delF = self.gate_act["F"].backward(delC)*self.C_1
-        delH = delI.dot(self.Whi.T) + delO.dot(self.Who.T) + delU.dot(self.Whu.T) + delF.dot(self.Whf.T)
+        delta = {}
+        delta["C"] = self.tanh["C"].backward(e)*self.buff["O"]
+        delta["C_1"] = delta["C"] * self.buff["F"]
+        delta["O"] = self.gate_act["O"].backward(e)*self.Ctanh
+        delta["I"] = self.gate_act["I"].backward(delta["C"])*self.buff["U"]
+        delta["U"] = self.tanh["U"].backward(delta["C"])*self.buff["I"]
+        delta["F"] = self.gate_act["F"].backward(delta["C"])*self.buff["C_1"]
+        delta["H"] = delta["I"].dot(self.Wh["I"].T) + delta["O"].dot(self.Wh["O"].T) + delta["U"].dot(self.Wh["U"].T) + delta["F"].dot(self.Wh["F"].T)
 
         #update
-        np.subtract(self.Wxi, self.optimizers[0](np.sum(np.einsum("bi,bj->bij", self.X, self.learning_rate*delI), axis=0))/self.batch, self.Wxi)
-        np.subtract(self.Wxo, self.optimizers[1](np.sum(np.einsum("bi,bj->bij", self.X, self.learning_rate*delO), axis=0))/self.batch, self.Wxo)
-        np.subtract(self.Wxu, self.optimizers[2](np.sum(np.einsum("bi,bj->bij", self.X, self.learning_rate*delU), axis=0))/self.batch, self.Wxu)
-        np.subtract(self.Wxf, self.optimizers[3](np.sum(np.einsum("bi,bj->bij", self.X, self.learning_rate*delF), axis=0))/self.batch, self.Wxf)
+        for i, k in enumerate(self.Wx):
+            np.subtract(self.Wx[k], self.optimizers[i](np.sum(np.einsum("bi,bj->bij", self.X, self.learning_rate*delta[k]), axis=0))/self.batch, self.Wx[k])
 
-        np.subtract(self.Whi, self.optimizers[4](np.sum(np.einsum("bi,bj->bij", self.H_1, self.learning_rate*delI), axis=0))/self.batch, self.Whi)
-        np.subtract(self.Who, self.optimizers[5](np.sum(np.einsum("bi,bj->bij", self.H_1, self.learning_rate*delO), axis=0))/self.batch, self.Who)
-        np.subtract(self.Whu, self.optimizers[6](np.sum(np.einsum("bi,bj->bij", self.H_1, self.learning_rate*delU), axis=0))/self.batch, self.Whu)
-        np.subtract(self.Whf, self.optimizers[7](np.sum(np.einsum("bi,bj->bij", self.H_1, self.learning_rate*delF), axis=0))/self.batch, self.Whf)
+        for i, k in enumerate(self.Wh):
+            np.subtract(self.Wh["I"], self.optimizers[4+i](np.sum(np.einsum("bi,bj->bij", self.buff["H_1"], self.learning_rate*delta["I"]), axis=0))/self.batch, self.Wh["I"])
 
-        self.Bi -= np.sum(self.learning_rate * delI)
-        self.Bo -= np.sum(self.learning_rate * delO)
-        self.Bu -= np.sum(self.learning_rate * delU)
-        self.Bf -= np.sum(self.learning_rate * delF)
+        for k in self.B:
+            self.B[k] -= np.sum(self.learning_rate * delta[k])
 
-        return delH
+        return delta["H"]
 
 
 class BatchNorm(Layer):
