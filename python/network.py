@@ -47,6 +47,7 @@ class Network:
             for l in self.layers:
                 l.configure(X.shape, "TRAIN", prevLayer)
                 prevLayer = l
+            self.configured = True
 
         self.Y = X
         for layer in self.layers:
