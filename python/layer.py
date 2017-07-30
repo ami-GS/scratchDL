@@ -213,6 +213,7 @@ class LSTM(Layer):
         for k in ["I", "F", "O"]:
             self.buff[k] = self.gate_act[k].forward(self.X.dot(self.Wx[k]) + self.buff["H_1"].dot(self.Wh[k]) + self.B[k])
         self.buff["U"] = self.tanh["U"].forward(self.X.dot(self.Wx["U"]) + self.buff["H_1"].dot(self.Wh["U"]) + self.B["U"])
+        self.buff["C"] = self.buff["I"]*self.buff["C_1"] + self.buff["U"] * self.buff["I"]
         self.Ctanh = self.tanh["C"].forward(self.buff["C"])
         self.buff["H"] = self.Ctanh * self.buff["O"]
         self.buff["C_1"] = self.buff["C"]
