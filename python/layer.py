@@ -235,7 +235,7 @@ class LSTM(Layer):
             np.subtract(self.Wx[k], self.optimizers[i](np.sum(np.einsum("bi,bj->bij", self.X, self.learning_rate*delta[k]), axis=0))/self.batch, self.Wx[k])
 
         for i, k in enumerate(self.Wh):
-            np.subtract(self.Wh["I"], self.optimizers[4+i](np.sum(np.einsum("bi,bj->bij", self.buff["H_1"], self.learning_rate*delta["I"]), axis=0))/self.batch, self.Wh["I"])
+            np.subtract(self.Wh[k], self.optimizers[4+i](np.sum(np.einsum("bi,bj->bij", self.buff["H_1"], self.learning_rate*delta[k]), axis=0))/self.batch, self.Wh[k])
 
         for k in self.B:
             self.B[k] -= np.sum(self.learning_rate * delta[k])
