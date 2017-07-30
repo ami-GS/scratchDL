@@ -34,7 +34,7 @@ if __name__ == "__main__":
         learning_rate = learning_rate,
         optimizer=Momentum(0.9),
         batch=batchSize,
-        dtype=np.float16
+        dtype=np.float32
     )
 
     err_prev = 0
