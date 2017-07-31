@@ -4,6 +4,7 @@ from optimizer import Momentum
 from network import Network
 from loss import MSE, CrossEntropy
 import numpy as np
+import matplotlib.pyplot as plt
 
 if __name__ == "__main__":
     dataNum = 100
@@ -37,3 +38,6 @@ if __name__ == "__main__":
         err_prev = err
 
     print lstm.predict(labelY[:batchSize, :input_shape]), labelY[:batchSize, input_shape:input_shape+units]
+    nxt = lstm.predict(labelY[:batchSize,:input_shape])
+    plt.plot(dataX[0,input_shape:input_shape+units], nxt[0, :], dataX[0, input_shape:input_shape+units], labelY[0, input_shape:input_shape+units])
+    plt.show()
