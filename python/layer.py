@@ -183,8 +183,8 @@ from activation import Sigmoid, Tanh
 class LSTM(Layer):
     def __init__(self, units=0, input_shape=0, dtype=np.float32, gate_act=Sigmoid):
         super(LSTM, self).__init__(input_shape, units)
-        self.gate_act = {"I":gate_act(), "F":gate_act(), "O":gate_act()}
-        self.tanh = {"U":Tanh(), "C":Tanh()}
+        self.gate_acts = {"I":gate_act(), "F":gate_act(), "O":gate_act(), "U":Tanh()}
+        self.act_tanh = Tanh()
         self.Wx = {"I":None, "F":None, "U":None, "O":None}
         self.Wh = {"I":None, "F":None, "U":None, "O":None}
         self.B = {"I":None, "F":None, "U":None, "O":None}
@@ -195,10 +195,9 @@ class LSTM(Layer):
 
     def configure(self, data_shape, phase, prevLayer = None):
         self.batch = data_shape[0]
-        for k in self.gate_act:
-            self.gate_act[k].configure(data_shape, phase, prevLayer)
-        for k in self.tanh:
-            self.tanh[k].configure(data_shape, phase, prevLayer)
+        for k in self.gate_acts:
+            self.gate_acts[k].configure(data_shape, phase, prevLayer)
+        self.act_tanh.configure(data_shape, phase, prevLayer)
         self.optimizers = []
         for i in range(8):
             self.optimizers.append(copy.deepcopy(self.optimizer))
@@ -210,11 +209,10 @@ class LSTM(Layer):
     def forward(self, x):
         self.X[:] = x
 
-        for k in ["I", "F", "O"]:
-            self.buff[k] = self.gate_act[k].forward(self.X.dot(self.Wx[k]) + self.buff["H_1"].dot(self.Wh[k]) + self.B[k])
-        self.buff["U"] = self.tanh["U"].forward(self.X.dot(self.Wx["U"]) + self.buff["H_1"].dot(self.Wh["U"]) + self.B["U"])
+        for k in ["I", "F", "O", "U"]:
+            self.buff[k] = self.gate_acts[k].forward(self.X.dot(self.Wx[k]) + self.buff["H_1"].dot(self.Wh[k]) + self.B[k])
         self.buff["C"] = self.buff["I"]*self.buff["C_1"] + self.buff["U"] * self.buff["I"]
-        self.Ctanh = self.tanh["C"].forward(self.buff["C"])
+        self.Ctanh = self.act_tanh.forward(self.buff["C"])
         self.buff["H"] = self.Ctanh * self.buff["O"]
         self.buff["C_1"] = self.buff["C"]
         self.buff["H_1"] = self.buff["H"]
@@ -222,22 +220,18 @@ class LSTM(Layer):
 
     def backward(self, e):
         delta = {}
-        delta["C"] = self.tanh["C"].backward(e)*self.buff["O"]
+        delta["C"] = self.act_tanh.backward(e)*self.buff["O"]
         delta["C_1"] = delta["C"] * self.buff["F"]
-        delta["O"] = self.gate_act["O"].backward(e)*self.Ctanh
-        delta["I"] = self.gate_act["I"].backward(delta["C"])*self.buff["U"]
-        delta["U"] = self.tanh["U"].backward(delta["C"])*self.buff["I"]
-        delta["F"] = self.gate_act["F"].backward(delta["C"])*self.buff["C_1"]
+        delta["O"] = self.gate_acts["O"].backward(e)*self.Ctanh
+        delta["I"] = self.gate_acts["I"].backward(delta["C"])*self.buff["U"]
+        delta["U"] = self.gate_acts["U"].backward(delta["C"])*self.buff["I"]
+        delta["F"] = self.gate_acts["F"].backward(delta["C"])*self.buff["C_1"]
         delta["H"] = delta["I"].dot(self.Wh["I"].T) + delta["O"].dot(self.Wh["O"].T) + delta["U"].dot(self.Wh["U"].T) + delta["F"].dot(self.Wh["F"].T)
 
         #update
-        for i, k in enumerate(self.Wx):
+        for i, k in enumerate(["I", "F", "U", "O"]):
             np.subtract(self.Wx[k], self.optimizers[i](np.sum(np.einsum("bi,bj->bij", self.X, self.learning_rate*delta[k]), axis=0))/self.batch, self.Wx[k])
-
-        for i, k in enumerate(self.Wh):
             np.subtract(self.Wh[k], self.optimizers[4+i](np.sum(np.einsum("bi,bj->bij", self.buff["H_1"], self.learning_rate*delta[k]), axis=0))/self.batch, self.Wh[k])
-
-        for k in self.B:
             self.B[k] -= np.sum(self.learning_rate * delta[k])
 
         return delta["H"]
