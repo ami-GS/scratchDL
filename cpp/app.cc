@@ -22,8 +22,8 @@ int main() {
     char tmp_label;
     std::string f_prefix("../data/cifar10/data_batch_");
     std::string f_suffix(".bin");
-    for (int b = 1; b < 6; b++) {
-        std::ifstream infile(f_prefix + std::to_string(b) + f_suffix);
+    for (int b = 0; b < 5; b++) {
+        std::ifstream infile(f_prefix + std::to_string(b+1) + f_suffix);
         for (int i = 0; i < NUMIMG; i++) {
             infile.read(&tmp_label, 1);
             all_label[i] = (int)tmp_label;
