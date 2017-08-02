@@ -21,12 +21,9 @@ int MSE::configure(int batch, Layer* prevLayer) {
 
 float MSE::error(float* x, int* label) {
     float e = 0;
-    float tmp;
     #pragma omp  parallel for reduction(+:e)
-    for (int b = 0; b < this->batch; b++) {
-        for (int i = 0; i < this->prevLayer->units; i++) {
-            e += std::pow(std::abs(x[i]-(float)label[i]), 2)*0.5/this->batch;
-        }
+    for (int i = 0; i < this->batch*this->prevLayer->units; i++) {
+        e += std::pow(x[i]-(float)label[i], 2)*0.5/this->batch;
     }
     return e;
 }
