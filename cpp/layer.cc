@@ -2,17 +2,18 @@
 #include <stdlib.h>
 #include <random>
 
-Layer::Layer(int input_shape, int units) : batch(1), filter(0), channel(0), input_shape(input_shape), units(units), prevLayer(nullptr) {}
+Layer::Layer(int input_shape, int units) : batch(1), filter(0), channel(0), input_shape(input_shape), units(units), prevLayer(nullptr), momentum_a(1.0) {}
 Layer::~Layer() {
     free(this->E);
     free(this->Y);
     free(this->X);
 }
 
-int Layer::configure(int batch, float learning_rate, Layer* prevLayer) {
+int Layer::configure(int batch, float learning_rate, float v_param, Layer* prevLayer) {
     this->batch = batch;
     this->batch_inv = 1/batch;
     this->learning_rate = learning_rate;
+    this->momentum_a = v_param;
     if (prevLayer != nullptr) {
         prevLayer->nxtLayer = this;
         this->prevLayer = prevLayer;
@@ -23,14 +24,16 @@ int Layer::configure(int batch, float learning_rate, Layer* prevLayer) {
 FullyConnect::FullyConnect(int input_shape, int units) : Layer(input_shape, units) {}
 FullyConnect::~FullyConnect() {
     free(this->W);
+    free(this->delta_buf);
 }
 
-int FullyConnect::configure(int batch, float learning_rate, Layer* prevLayer) {
-    Layer::configure(batch, learning_rate, prevLayer);
+int FullyConnect::configure(int batch, float learning_rate, float v_param, Layer* prevLayer) {
+    Layer::configure(batch, learning_rate, v_param, prevLayer);
     this->Y = (float*)malloc(sizeof(float)*this->batch*this->units);
     this->W = (float*)malloc(sizeof(float)*this->input_shape*this->units);
     this->B = (float*)malloc(sizeof(float));
     this->E = (float*)malloc(sizeof(float)*this->batch*this->input_shape);
+    this->delta_buf = (float*)malloc(sizeof(float)*this->batch*this->units);
     this->X = (float*)malloc(sizeof(float)*this->batch*this->input_shape);
     std::random_device rd;
     std::mt19937 mt(rd());
@@ -78,8 +81,7 @@ void FullyConnect::backward(float* e) {
     for (int b = 0; b < this->batch; b++) {
         for (int i = 0; i < this->input_shape; i++) {
             for (int u = 0; u < this->units; u++) {
-                // TODO : not good for division in each calc
-                this->W[i*this->units + u] -= (this->learning_rate * this->X[b*this->input_shape + i] * e[b*this->units + u])*this->batch_inv;
+                this->W[i*this->units + u] -= this->momentum_a * this->delta_buf[b*this->units + u] + (this->learning_rate * this->X[b*this->input_shape + i] * e[b*this->units + u])*this->batch_inv;
             }
         }
     }
@@ -90,6 +92,10 @@ void FullyConnect::backward(float* e) {
         }
     }
 
+    #pragma omp parallel for
+    for (int i = 0; i < this->batch*this->units; i++) {
+        this->delta_buf[i] = e[i];
+    }
     return;
 }
 
@@ -106,15 +112,17 @@ Conv2D::Conv2D(int input_shape, int channel, int filter, int kernel_size, int st
 }
 Conv2D::~Conv2D() {
     free(this->F);
+    free(this->delta_buf);
 }
 
-int Conv2D::configure(int batch, float learning_rate, Layer* prevLayer) {
-    Layer::configure(batch, learning_rate, prevLayer);
+int Conv2D::configure(int batch, float learning_rate, float v_param, Layer* prevLayer) {
+    Layer::configure(batch, learning_rate, v_param, prevLayer);
     this->X = (float*)malloc(sizeof(float)*this->batch*this->channel*this->input_shape);
     // for filter and data matmul
     //this->X = (float*)malloc(sizeof(float)*this->batch*this->channel*this->kernel_size*this->kernel_size*this->units*this->units);
     this->Y = (float*)malloc(sizeof(float)*this->batch*this->filter*this->units);
     this->E = (float*)malloc(sizeof(float)*this->batch*this->channel*this->input_shape);
+    this->delta_buf = (float*)malloc(sizeof(float)*this->batch*this->filter*this->units);
     this->F = (float*)malloc(sizeof(float)*this->filter*this->kernel_size*this->kernel_size);
 
     std::random_device rd;
@@ -184,13 +192,18 @@ void Conv2D::backward(float* e) {
                     for (int co = 0; co < this->u_rowcol; co++) {
                         for (int ki = 0; ki < this->kernel_size; ki++) {
                             for (int kj = 0; kj < this->kernel_size; kj++) {
-                                this->F[f*this->kernel_size*this->kernel_size+ki*this->kernel_size+kj] -= (this->learning_rate * this->X[b*this->channel*this->input_shape+c*this->input_shape+ro*this->i_rowcol+co+ki*this->i_rowcol+kj] * e[b*this->filter*this->units+f*this->units+ro*this->u_rowcol+co])*this->batch_inv;
+                                this->F[f*this->kernel_size*this->kernel_size+ki*this->kernel_size+kj] -= this->momentum_a * this->delta_buf[b*this->filter*this->units+f*this->units+ro*this->u_rowcol+co] + (this->learning_rate * this->X[b*this->channel*this->input_shape+c*this->input_shape+ro*this->i_rowcol+co+ki*this->i_rowcol+kj] * e[b*this->filter*this->units+f*this->units+ro*this->u_rowcol+co])*this->batch_inv;
                             }
                         }
                     }
                 }
             }
         }
+    }
+
+    #pragma omp parallel for
+    for (int i = 0; i < this->batch*this->filter*this->units; i++) {
+        this->delta_buf[i] = e[i];
     }
     return;
 }
@@ -209,8 +222,8 @@ MaxPooling2D::~MaxPooling2D() {
     free(this->L);
 }
 
-int MaxPooling2D::configure(int batch, float learning_rate, Layer* prevLayer) {
-    Layer::configure(batch, learning_rate, prevLayer);
+int MaxPooling2D::configure(int batch, float learning_rate, float v_param, Layer* prevLayer) {
+    Layer::configure(batch, learning_rate, v_param, prevLayer);
     this->learning_rate = learning_rate;
     this->Y = (float*)malloc(sizeof(float)*this->batch*this->channel*this->units);
     this->L = (int*)malloc(sizeof(int)*this->batch*this->channel*this->units);

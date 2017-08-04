@@ -22,6 +22,7 @@ int idx_array[NUMIMG*NUMDSET];
 int batch_label[batch*CLASS];
 float batch_data_float[batch*IMGSZ];
 float learning_rate = 0.001;
+float momentum_param = 0.8;
 int epoch = 2;
 
 int main() {
@@ -62,7 +63,7 @@ int main() {
     };
     MSE* loss = new MSE();
     Network* network = new Network(7, layers, loss);
-    network->configure(batch, learning_rate);
+    network->configure(batch, learning_rate, momentum_param);
     // run
     for (int e = 0; e < epoch; e++) {
         for (int i = 0; i < NUMDSET*NUMIMG; i += batch) {
