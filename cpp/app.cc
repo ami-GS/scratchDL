@@ -4,16 +4,24 @@
 #include "network.h"
 #include <iostream>
 #include <fstream>
+#include <algorithm>
+#include <random>
+
 #define CLASS   10
 #define NUMIMG  10000
 #define IMGSZ   3072
 #define NUMDSET 5
+#define batch 20
 
 int all_label[NUMIMG];
 int one_hot_label[NUMDSET*NUMIMG*CLASS];
 float all_data_float[NUMDSET*IMGSZ*NUMIMG];
+// randomized idx
+int idx_array[NUMIMG*NUMDSET];
+// to randome data
+int batch_label[batch*CLASS];
+float batch_data_float[batch*IMGSZ];
 float learning_rate = 0.001;
-int batch = 20;
 int epoch = 2;
 
 int main() {
@@ -38,6 +46,10 @@ int main() {
         }
     }
 
+    for (int i = 0; i < NUMIMG*NUMDSET; i++)
+        idx_array[i] = i;
+    std::shuffle(idx_array, idx_array+NUMIMG*NUMDSET, std::mt19937());
+
     // configure layer
     Layer* layers[7] = {
         new Conv2D(1024, 3, 4, 3, 1, 0),
@@ -51,17 +63,23 @@ int main() {
     MSE* loss = new MSE();
     Network* network = new Network(7, layers, loss);
     network->configure(batch, learning_rate);
-
     // run
     for (int e = 0; e < epoch; e++) {
         for (int i = 0; i < NUMDSET*NUMIMG; i += batch) {
-            float* data = &all_data_float[i*IMGSZ];
-            int* label = &one_hot_label[i*CLASS];
-            network->train(data, label);
+            for (int b = 0; b < batch; b++) {
+                for (int j = 0; j < IMGSZ; j++)
+                    batch_data_float[b*IMGSZ+j] = all_data_float[idx_array[i+b]*IMGSZ+j];
+                for (int j = 0; j < CLASS; j++)
+                    batch_label[b*CLASS+j] = one_hot_label[idx_array[i+b]*CLASS+j];
+            }
+
+            float* data = batch_data_float;
+            int* label = batch_label;
             if (i % 800 == 0) {
                 float err = loss->error(network->layers[6]->Y, label);
                 std::cout << "loop " << i << " " << err << std::endl;
             }
+            network->train(data, label);
         }
     }
     return 1;
