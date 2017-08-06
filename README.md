@@ -5,7 +5,7 @@ Deep learning implementation
 #### TODO
 
 - python
-  - recurrent
+  - recurrent (done LSTM)
 - C++
   - MKL version (really difficult due to lack of documents)
   - OpenCL
