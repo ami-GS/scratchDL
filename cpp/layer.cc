@@ -77,15 +77,31 @@ void FullyConnect::backward(float* e) {
         }
     }
 
-    #pragma omp  parallel for
-    for (int b = 0; b < this->batch; b++) {
-        for (int i = 0; i < this->input_shape; i++) {
-            for (int u = 0; u < this->units; u++) {
-                this->W[i*this->units + u] -= this->momentum_a * this->delta_buf[b*this->units + u] + \
-                    (this->learning_rate * this->X[b*this->input_shape + i] * e[b*this->units + u])*this->batch_inv;
+    // update
+    if (this->momentum_a != 0) {
+        #pragma omp  parallel for
+        for (int b = 0; b < this->batch; b++) {
+            for (int i = 0; i < this->input_shape; i++) {
+                for (int u = 0; u < this->units; u++) {
+                    this->W[i*this->units + u] -= this->momentum_a * this->delta_buf[b*this->units + u] + \
+                        (this->learning_rate * this->X[b*this->input_shape + i] * e[b*this->units + u])*this->batch_inv;
+                }
+            }
+        }
+        #pragma omp parallel for
+        for (int i = 0; i < this->batch*this->units; i++) {
+            this->delta_buf[i] = e[i];
+        }
+    } else {
+        for (int b = 0; b < this->batch; b++) {
+            for (int i = 0; i < this->input_shape; i++) {
+                for (int u = 0; u < this->units; u++) {
+                    this->W[i*this->units + u] -= this->learning_rate * this->X[b*this->input_shape + i] * e[b*this->units + u]*this->batch_inv;
+                }
             }
         }
     }
+
     #pragma omp  parallel for
     for (int b = 0; b < this->batch; b++) {
         for (int u = 0; u < this->units; u++) {
@@ -93,10 +109,6 @@ void FullyConnect::backward(float* e) {
         }
     }
 
-    #pragma omp parallel for
-    for (int i = 0; i < this->batch*this->units; i++) {
-        this->delta_buf[i] = e[i];
-    }
     return;
 }
 
@@ -190,19 +202,46 @@ void Conv2D::backward(float* e) {
         }
     }
 
-    #pragma omp  parallel for
-    for (int b = 0; b < this->batch; b++) {
-        for (int c = 0; c < this->channel; c++) {
-            for (int f = 0; f < this->filter; f++) {
-                for (int ro = 0; ro < this->u_rowcol; ro++) {
-                    for (int co = 0; co < this->u_rowcol; co++) {
-                        for (int ki = 0; ki < this->kernel_size; ki++) {
-                            for (int kj = 0; kj < this->kernel_size; kj++) {
-                                this->F[f*this->kernel_size*this->kernel_size+ki*this->kernel_size+kj] -= \
-                                    this->momentum_a * this->delta_buf[b*this->filter*this->units+f*this->units+ro*this->u_rowcol+co] + \
-                                    (this->learning_rate * this->X[b*this->channel*this->input_shape+c*this->input_shape+ \
-                                                                   ro*this->i_rowcol+co+ki*this->i_rowcol+kj] * \
-                                     e[b*this->filter*this->units+f*this->units+ro*this->u_rowcol+co])*this->batch_inv;
+    // update
+    if (this->momentum_a != 0) {
+        #pragma omp  parallel for
+        for (int b = 0; b < this->batch; b++) {
+            for (int c = 0; c < this->channel; c++) {
+                for (int f = 0; f < this->filter; f++) {
+                    for (int ro = 0; ro < this->u_rowcol; ro++) {
+                        for (int co = 0; co < this->u_rowcol; co++) {
+                            for (int ki = 0; ki < this->kernel_size; ki++) {
+                                for (int kj = 0; kj < this->kernel_size; kj++) {
+                                    this->F[f*this->kernel_size*this->kernel_size+ki*this->kernel_size+kj] -= \
+                                        this->momentum_a * this->delta_buf[b*this->filter*this->units+f*this->units+ro*this->u_rowcol+co] + \
+                                        (this->learning_rate * this->X[b*this->channel*this->input_shape+c*this->input_shape+ \
+                                                                       ro*this->i_rowcol+co+ki*this->i_rowcol+kj] * \
+                                         e[b*this->filter*this->units+f*this->units+ro*this->u_rowcol+co])*this->batch_inv;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        #pragma omp parallel for
+        for (int i = 0; i < this->batch*this->filter*this->units; i++) {
+            this->delta_buf[i] = e[i];
+        }
+    } else {
+        #pragma omp  parallel for
+        for (int b = 0; b < this->batch; b++) {
+            for (int c = 0; c < this->channel; c++) {
+                for (int f = 0; f < this->filter; f++) {
+                    for (int ro = 0; ro < this->u_rowcol; ro++) {
+                        for (int co = 0; co < this->u_rowcol; co++) {
+                            for (int ki = 0; ki < this->kernel_size; ki++) {
+                                for (int kj = 0; kj < this->kernel_size; kj++) {
+                                    this->F[f*this->kernel_size*this->kernel_size+ki*this->kernel_size+kj] -= \
+                                        this->learning_rate * this->X[b*this->channel*this->input_shape+c*this->input_shape+ \
+                                                                       ro*this->i_rowcol+co+ki*this->i_rowcol+kj] * \
+                                         e[b*this->filter*this->units+f*this->units+ro*this->u_rowcol+co]*this->batch_inv;
+                                }
                             }
                         }
                     }
@@ -211,10 +250,7 @@ void Conv2D::backward(float* e) {
         }
     }
 
-    #pragma omp parallel for
-    for (int i = 0; i < this->batch*this->filter*this->units; i++) {
-        this->delta_buf[i] = e[i];
-    }
+
     return;
 }
 
