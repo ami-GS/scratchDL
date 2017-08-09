@@ -12,10 +12,10 @@ Network::~Network() {
 };
 
 
-int Network::configure(int batch, float learning_rate, float v_param) {
+int Network::configure(int batch, float learning_rate, float v_param, phase_t phase) {
     Layer* prevLayer = nullptr;
     for (int i = 0; i < this->layerNum; i++) {
-        this->layers[i]->configure(batch, learning_rate, v_param, prevLayer);
+        this->layers[i]->configure(batch, learning_rate, v_param, prevLayer, phase);
         prevLayer = this->layers[i];
     }
     loss->configure(batch, prevLayer);

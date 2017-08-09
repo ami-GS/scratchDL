@@ -9,11 +9,12 @@ Layer::~Layer() {
     free(this->X);
 }
 
-int Layer::configure(int batch, float learning_rate, float v_param, Layer* prevLayer) {
+int Layer::configure(int batch, float learning_rate, float v_param, Layer* prevLayer, phase_t phase) {
     this->batch = batch;
     this->batch_inv = 1/batch;
     this->learning_rate = learning_rate;
     this->momentum_a = v_param;
+    this->phase = phase;
     if (prevLayer != nullptr) {
         prevLayer->nxtLayer = this;
         this->prevLayer = prevLayer;
@@ -27,8 +28,8 @@ FullyConnect::~FullyConnect() {
     free(this->delta_buf);
 }
 
-int FullyConnect::configure(int batch, float learning_rate, float v_param, Layer* prevLayer) {
-    Layer::configure(batch, learning_rate, v_param, prevLayer);
+int FullyConnect::configure(int batch, float learning_rate, float v_param, Layer* prevLayer, phase_t phase) {
+    Layer::configure(batch, learning_rate, v_param, prevLayer, phase);
     this->Y = (float*)malloc(sizeof(float)*this->batch*this->units);
     this->W = (float*)malloc(sizeof(float)*this->input_shape*this->units);
     this->B = (float*)malloc(sizeof(float));
@@ -128,8 +129,8 @@ Conv2D::~Conv2D() {
     free(this->delta_buf);
 }
 
-int Conv2D::configure(int batch, float learning_rate, float v_param, Layer* prevLayer) {
-    Layer::configure(batch, learning_rate, v_param, prevLayer);
+int Conv2D::configure(int batch, float learning_rate, float v_param, Layer* prevLayer, phase_t phase) {
+    Layer::configure(batch, learning_rate, v_param, prevLayer, phase);
     this->X = (float*)malloc(sizeof(float)*this->batch*this->channel*this->input_shape);
     // for filter and data matmul
     //this->X = (float*)malloc(sizeof(float)*this->batch*this->channel*this->kernel_size*this->kernel_size*this->units*this->units);
@@ -268,8 +269,8 @@ MaxPooling2D::~MaxPooling2D() {
     free(this->L);
 }
 
-int MaxPooling2D::configure(int batch, float learning_rate, float v_param, Layer* prevLayer) {
-    Layer::configure(batch, learning_rate, v_param, prevLayer);
+int MaxPooling2D::configure(int batch, float learning_rate, float v_param, Layer* prevLayer, phase_t phase) {
+    Layer::configure(batch, learning_rate, v_param, prevLayer, phase);
     this->learning_rate = learning_rate;
     this->Y = (float*)malloc(sizeof(float)*this->batch*this->channel*this->units);
     this->L = (int*)malloc(sizeof(int)*this->batch*this->channel*this->units);

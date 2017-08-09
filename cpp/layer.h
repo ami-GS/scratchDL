@@ -1,6 +1,11 @@
 #ifndef CPP_LAYER_H_
 #define CPP_LAYER_H_
 
+typedef enum {
+    TRAIN,
+    TEST,
+} phase_t;
+
 class Layer {
 public:
     int batch;
@@ -12,6 +17,7 @@ public:
     Layer* prevLayer;
     Layer* nxtLayer;
     float learning_rate;
+    phase_t phase;
     float* E;
     // for Momentum
     float* delta_buf;
@@ -20,7 +26,7 @@ public:
     float* X;
     Layer(int input_shape, int units);
     virtual ~Layer();
-    virtual int configure(int batch, float learning_rate, float v_param, Layer* prevLayer);
+    virtual int configure(int batch, float learning_rate, float v_param, Layer* prevLayer, phase_t phase);
     virtual void forward(float* x) = 0;
     virtual void backward(float* e) = 0;
 };
@@ -31,7 +37,7 @@ public:
     float* B;
     FullyConnect(int input_shape, int units);
     ~FullyConnect();
-    int configure(int batch, float learning_rate, float v_param, Layer* prevLayer);
+    int configure(int batch, float learning_rate, float v_param, Layer* prevLayer, phase_t phase);
     void forward(float* x);
     void backward(float* e);
 };
@@ -46,7 +52,7 @@ public:
     int padding;
     Conv2D(int input_shape, int channel, int filter, int kernel_size, int stride, int padding);
     ~Conv2D();
-    int configure(int batch, float learning_rate, float v_param, Layer* prevLayer);
+    int configure(int batch, float learning_rate, float v_param, Layer* prevLayer, phase_t phase);
     void forward(float* x);
     void backward(float* e);
 };
@@ -60,7 +66,7 @@ public:
     int stride;
     MaxPooling2D(int input_shape, int channel, int kernel_size, int stride);
     ~MaxPooling2D();
-    int configure(int batch, float learning_rate, float v_param, Layer* prevLayer);
+    int configure(int batch, float learning_rate, float v_param, Layer* prevLayer, phase_t phase);
     void forward(float* x);
     void backward(float* e);
 };

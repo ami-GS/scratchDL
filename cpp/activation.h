@@ -8,7 +8,7 @@ class Activation : public Layer {
 public:
     Activation();
     ~Activation();
-    int configure(int batch, float learning_rate, float v_param, Layer* prevLayer);
+    int configure(int batch, float learning_rate, float v_param, Layer* prevLayer, phase_t phase);
     virtual void forward(float* x) = 0;
     virtual void backward(float* e) = 0;
 };

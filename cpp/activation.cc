@@ -5,13 +5,13 @@
 Activation::Activation() : Layer(0, 0) {}
 Activation::~Activation() {}
 
-int Activation::configure(int batch, float learning_rate, float v_param, Layer* prevLayer) {
+int Activation::configure(int batch, float learning_rate, float v_param, Layer* prevLayer, phase_t phase) {
     this->input_shape = prevLayer->units;
     if (prevLayer->channel != 0) {
         this->input_shape *= prevLayer->channel;
     }
     this->units = this->input_shape;
-    Layer::configure(batch, learning_rate, v_param, prevLayer);
+    Layer::configure(batch, learning_rate, v_param, prevLayer, phase);
     this->Y = (float*)malloc(sizeof(float)*this->batch*this->input_shape);
     this->E = (float*)malloc(sizeof(float)*this->batch*this->input_shape);
     #pragma omp  parallel for
