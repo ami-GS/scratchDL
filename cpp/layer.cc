@@ -4,9 +4,10 @@
 
 Layer::Layer(int input_shape, int units) : batch(1), filter(0), channel(0), input_shape(input_shape), units(units), prevLayer(nullptr), momentum_a(1.0) {}
 Layer::~Layer() {
-    free(this->E);
     free(this->Y);
-    free(this->X);
+    if (this->phase == TRAIN) {
+        free(this->E);
+    }
 }
 
 int Layer::configure(int batch, float learning_rate, float v_param, Layer* prevLayer, phase_t phase) {
@@ -25,7 +26,9 @@ int Layer::configure(int batch, float learning_rate, float v_param, Layer* prevL
 FullyConnect::FullyConnect(int input_shape, int units) : Layer(input_shape, units) {}
 FullyConnect::~FullyConnect() {
     free(this->W);
-    free(this->delta_buf);
+    if (this->phase == TRAIN) {
+        free(this->delta_buf);
+    }
 }
 
 int FullyConnect::configure(int batch, float learning_rate, float v_param, Layer* prevLayer, phase_t phase) {
@@ -33,9 +36,10 @@ int FullyConnect::configure(int batch, float learning_rate, float v_param, Layer
     this->Y = (float*)malloc(sizeof(float)*this->batch*this->units);
     this->W = (float*)malloc(sizeof(float)*this->input_shape*this->units);
     this->B = (float*)malloc(sizeof(float));
-    this->E = (float*)malloc(sizeof(float)*this->batch*this->input_shape);
-    this->delta_buf = (float*)malloc(sizeof(float)*this->batch*this->units);
-    this->X = (float*)malloc(sizeof(float)*this->batch*this->input_shape);
+    if (this->phase == TRAIN) {
+        this->E = (float*)malloc(sizeof(float)*this->batch*this->input_shape);
+        this->delta_buf = (float*)malloc(sizeof(float)*this->batch*this->units);
+    }
     std::random_device rd;
     std::mt19937 mt(rd());
     std::uniform_real_distribution<float> rand(-1.0,1.0);
@@ -52,7 +56,6 @@ void FullyConnect::forward(float* x) {
     for (int i = 0; i < this->batch*this->units; i++) {
         this->Y[i] = 0;
     }
-    this->X = x;
     #pragma omp  parallel for
     for (int b = 0; b < this->batch; b++) {
         for (int i = 0; i < this->input_shape; i++) {
@@ -60,6 +63,9 @@ void FullyConnect::forward(float* x) {
                 this->Y[b*this->units + u] += x[b*this->input_shape + i] * this->W[i*this->units + u] + *this->B;
             }
         }
+    }
+    if (this->phase == TRAIN) {
+        this->X = x;
     }
     return;
 }
@@ -126,12 +132,13 @@ Conv2D::Conv2D(int input_shape, int channel, int filter, int kernel_size, int st
 }
 Conv2D::~Conv2D() {
     free(this->F);
-    free(this->delta_buf);
+    if (this->phase == TRAIN) {
+        free(this->delta_buf);
+    }
 }
 
 int Conv2D::configure(int batch, float learning_rate, float v_param, Layer* prevLayer, phase_t phase) {
     Layer::configure(batch, learning_rate, v_param, prevLayer, phase);
-    this->X = (float*)malloc(sizeof(float)*this->batch*this->channel*this->input_shape);
     // for filter and data matmul
     //this->X = (float*)malloc(sizeof(float)*this->batch*this->channel*this->kernel_size*this->kernel_size*this->units*this->units);
     this->Y = (float*)malloc(sizeof(float)*this->batch*this->filter*this->units);
@@ -155,7 +162,6 @@ void Conv2D::forward(float* x) {
     for (int i = 0; i < this->batch*this->filter*this->units; i++) {
         this->Y[i] = 0;
     }
-    this->X = x;
     #pragma omp  parallel for
     for (int b = 0; b < this->batch; b++) {
         for (int c = 0; c < this->channel; c++) {
@@ -165,7 +171,7 @@ void Conv2D::forward(float* x) {
                         for (int ki = 0; ki < this->kernel_size; ki++) {
                             for (int kj = 0; kj < this->kernel_size; kj++) {
                                 this->Y[b*this->units*this->filter+f*this->units+ro*this->i_rowcol+co] += \
-                                    this->X[b*this->input_shape*this->channel+c*this->input_shape+ro*this->i_rowcol+co+ki*this->i_rowcol+kj] * \
+                                    x[b*this->input_shape*this->channel+c*this->input_shape+ro*this->i_rowcol+co+ki*this->i_rowcol+kj] * \
                                     this->F[f*this->kernel_size*this->kernel_size+ki*this->kernel_size+kj];
                             }
                         }
@@ -173,6 +179,10 @@ void Conv2D::forward(float* x) {
                 }
             }
         }
+    }
+
+    if (this->phase == TRAIN) {
+        this->X = x;
     }
     return;
 }
@@ -266,15 +276,19 @@ MaxPooling2D::MaxPooling2D(int input_shape, int channel, int kernel_size, int st
     this->channel = channel;
 }
 MaxPooling2D::~MaxPooling2D() {
-    free(this->L);
+    if (this->phase == TRAIN) {
+        free(this->L);
+    }
 }
 
 int MaxPooling2D::configure(int batch, float learning_rate, float v_param, Layer* prevLayer, phase_t phase) {
     Layer::configure(batch, learning_rate, v_param, prevLayer, phase);
     this->learning_rate = learning_rate;
     this->Y = (float*)malloc(sizeof(float)*this->batch*this->channel*this->units);
-    this->L = (int*)malloc(sizeof(int)*this->batch*this->channel*this->units);
-    this->E = (float*)malloc(sizeof(float)*this->batch*this->channel*this->input_shape);
+    if (this->phase == TRAIN) {
+        this->L = (int*)malloc(sizeof(int)*this->batch*this->channel*this->units);
+        this->E = (float*)malloc(sizeof(float)*this->batch*this->channel*this->input_shape);
+    }
     return 1;
 }
 
@@ -292,7 +306,9 @@ void MaxPooling2D::forward(float* x) {
                             if (tmp < x[b*this->channel*this->input_shape+c*this->input_shape+ro*this->i_rowcol+co+ki*this->i_rowcol+kj]) {
                                 tmp = x[b*this->channel*this->input_shape+c*this->input_shape+ro*this->i_rowcol+co+ki*this->i_rowcol+kj];
                                 this->Y[b*this->channel*this->units+c*this->units+ro*this->u_rowcol+co] = tmp;
-                                this->L[b*this->channel*this->units+c*this->units+ro*this->u_rowcol+co] = ki*this->i_rowcol+kj;
+                                if (this->phase == TRAIN) {
+                                    this->L[b*this->channel*this->units+c*this->units+ro*this->u_rowcol+co] = ki*this->i_rowcol+kj;
+                                }
                             }
                         }
                     }

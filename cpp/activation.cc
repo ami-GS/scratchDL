@@ -13,11 +13,8 @@ int Activation::configure(int batch, float learning_rate, float v_param, Layer* 
     this->units = this->input_shape;
     Layer::configure(batch, learning_rate, v_param, prevLayer, phase);
     this->Y = (float*)malloc(sizeof(float)*this->batch*this->input_shape);
-    this->E = (float*)malloc(sizeof(float)*this->batch*this->input_shape);
-    #pragma omp  parallel for
-    for (int bi = 0; bi < this->batch*this->input_shape; bi++) {
-        this->Y[bi] = 0;
-        this->E[bi] = 0;
+    if (this->phase == TRAIN) {
+        this->E = (float*)malloc(sizeof(float)*this->batch*this->input_shape);
     }
     return 1;
 }
