@@ -7,23 +7,28 @@ Loss::~Loss() {
     free(this->D);
 }
 
-MSE::MSE() {}
-MSE::~MSE() {}
-
-int MSE::configure(int batch, Layer* prevLayer) {
+int Loss::configure(int batch, Layer* prevLayer) {
     if (prevLayer != nullptr) {
         this->prevLayer = prevLayer;
     }
     this->batch = batch;
+    this->batch_inv = 1/batch;
     this->D = (float*)malloc(sizeof(float)*this->batch*this->prevLayer->units);
     return 1;
+}
+
+MSE::MSE() {}
+MSE::~MSE() {}
+
+int MSE::configure(int batch, Layer* prevLayer) {
+    return Loss::configure(batch, prevLayer);
 }
 
 float MSE::error(float* x, int* label) {
     float e = 0;
     #pragma omp  parallel for reduction(+:e)
     for (int i = 0; i < this->batch*this->prevLayer->units; i++) {
-        e += std::pow(x[i]-(float)label[i], 2)*0.5/this->batch;
+        e += std::pow(x[i]-(float)label[i], 2)*0.5*this->batch_inv;
     }
     return e;
 }

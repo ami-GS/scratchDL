@@ -8,10 +8,11 @@ class Loss {
 public:
     float* D;
     int batch;
+    float batch_inv;
     Layer* prevLayer;
     Loss();
     ~Loss();
-    virtual int configure(int batch, Layer* prevLayer) = 0;
+    virtual int configure(int batch, Layer* prevLayer);
     virtual float error(float* x, int* label) = 0;
     virtual void partial_derivative(float* x, int* label) = 0;
 };
