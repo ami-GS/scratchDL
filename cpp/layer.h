@@ -1,6 +1,8 @@
 #ifndef CPP_LAYER_H_
 #define CPP_LAYER_H_
 
+#include <map>
+
 typedef enum {
     TRAIN,
     TEST,
@@ -66,6 +68,23 @@ public:
     int stride;
     MaxPooling2D(int input_shape, int channel, int kernel_size, int stride);
     ~MaxPooling2D();
+    int configure(int batch, float learning_rate, float v_param, Layer* prevLayer, phase_t phase);
+    void forward(float* x);
+    void backward(float* e);
+};
+
+
+class LSTM : public Layer {
+public:
+    char Idx[4] = {'I', 'F', 'U', 'O'};
+    std::map<char, *Activation> acts;
+    std::map<char, float*> Wx;
+    std::map<char, float*> Wh;
+    std::map<char, float> B;
+    char bIdx[8] = {'C', 'c', 'H', 'h', 'I', 'F', 'U', 'O'};
+    std::map<char, float*> buff;
+    LSTM(int input_shape, int units);
+    ~LSTM();
     int configure(int batch, float learning_rate, float v_param, Layer* prevLayer, phase_t phase);
     void forward(float* x);
     void backward(float* e);
