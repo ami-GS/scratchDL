@@ -338,3 +338,61 @@ void MaxPooling2D::backward(float* e) {
     }
     return;
 }
+
+
+LSTM::LSTM(int input_shape, int units) : Layer(input_shape, units) {}
+~LSTM::LSTM() {
+    for (int i = 0; i < 4; i++) {
+        free(this->Wx[this->Idx[i]]);
+        free(this->Wh[this->Idx[i]]);
+    }
+}
+
+int LSTM::configure(int batch, float learning_rate, float v_param, Layer* prevLayer, phase_t phase) {
+    int ret = Layer::configure(batch, learning_rate, v_param, prevLayer, phase);
+    this->acts['I'] = new Sigmoid();
+    this->acts['F'] = new Sigmoid();
+    this->acts['O'] = new Sigmoid();
+    this->acts['U'] = new Tanh();
+
+    std::random_device rd;
+    std::mt19937 mt(rd());
+    std::uniform_real_distribution<float> rand(-1.0,1.0);
+    for (int i = 0; i < 4; i++) {
+        this->Wx[this->Idx[i]] = (float*)malloc(sizeof(float*)*this->input_shape*this->units);
+        this->Wx[this->Idx[i]] = (float*)malloc(sizeof(float*)*this->units*this->units);
+        #pragma omp  parallel for
+        for (int iu = 0; iu < this->input_shape*this->units; iu++) {
+            this->Wx[this->Idx[i]][iu] = rand(mt);
+        }
+        #pragma omp  parallel for
+        for (int uu = 0; uu < this->units*this->units; uu++) {
+            this->Wh[this->Idx[i]][uu] = rand(mt);
+        }
+        *this->B[this->Idx[i]] = rand(mt);
+        this->acts[this->Idx].configure(batch, learning_rate, v_param, prevLayer, phase);
+    }
+
+    for (int i = 0; i < 8; i++) {
+        this->buff[this->bIdx[i]] = (float*)malloc(sizeof(float*)*this->batch*this->units);
+    }
+
+    return ret;
+}
+
+void LSTM::forward(float* x) {
+    for (int g = 0; i < 4; i++) {
+        for (int b = 0; b < this->batch; b++) {
+            for (int i = 0; i < this->input_shape; i++) {
+                for (int u = 0; u < this->units; u++) {
+                    this->buff[this->Idx[g]][b*this->units + u] += x[b*this->input_shape + i] * this->Wx[this->Idx[g]][i*this->units + u] + this->buff['h'][b*this->units + u] * this->Wh[this->Idx[g]][u*this->units + u] + *this->B;
+                }
+            }
+        }
+    }
+
+    if (this->phase = TRAIN) {
+        this->X = x;
+    }
+    this->Y = this->buff["H"];
+}
