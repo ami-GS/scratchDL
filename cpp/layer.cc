@@ -283,7 +283,6 @@ MaxPooling2D::~MaxPooling2D() {
 
 int MaxPooling2D::configure(int batch, float learning_rate, float v_param, Layer* prevLayer, phase_t phase) {
     Layer::configure(batch, learning_rate, v_param, prevLayer, phase);
-    this->learning_rate = learning_rate;
     this->Y = (float*)malloc(sizeof(float)*this->batch*this->channel*this->units);
     if (this->phase == TRAIN) {
         this->L = (int*)malloc(sizeof(int)*this->batch*this->channel*this->units);
