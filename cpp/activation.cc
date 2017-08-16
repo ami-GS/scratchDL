@@ -88,6 +88,7 @@ void Softmax::forward(float* x) {
             this->Y[b*this->input_shape+i] = this->Y[b*this->input_shape+i] / tmp;
         }
     }
+    free(maxVal);
     return;
 }
 
