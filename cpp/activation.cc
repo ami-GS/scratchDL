@@ -22,6 +22,10 @@ int Activation::configure(int batch, float learning_rate, float v_param, Layer* 
 Sigmoid::Sigmoid() {}
 Sigmoid::~Sigmoid() {}
 
+int Sigmoid::configure(int batch, float learning_rate, float v_param, Layer* prevLayer, phase_t phase) {
+    return Activation::configure(batch, learning_rate, v_param, prevLayer, phase);
+}
+
 void Sigmoid::forward(float* x) {
     #pragma omp  parallel for
     for (int bi = 0; bi < this->batch*this->input_shape; bi++) {
@@ -43,6 +47,10 @@ void Sigmoid::backward(float* e) {
 ReLU::ReLU() {}
 ReLU::~ReLU() {}
 
+int ReLU::configure(int batch, float learning_rate, float v_param, Layer* prevLayer, phase_t phase) {
+    return Activation::configure(batch, learning_rate, v_param, prevLayer, phase);
+}
+
 void ReLU::forward(float* x) {
     #pragma omp  parallel for
     for (int bi = 0; bi < this->batch*this->input_shape; bi++) {
@@ -62,16 +70,23 @@ void ReLU::backward(float* e) {
 
 
 Softmax::Softmax() {}
-Softmax::~Softmax() {}
+Softmax::~Softmax() {
+    free(this->maxVal);
+}
+
+int Softmax::configure(int batch, float learning_rate, float v_param, Layer* prevLayer, phase_t phase) {
+    int ret = Activation::configure(batch, learning_rate, v_param, prevLayer, phase);
+    this->maxVal = (float*)malloc(sizeof(float)*this->batch);
+    return ret;
+}
 
 void Softmax::forward(float* x) {
-    float* maxVal = (float*)malloc(sizeof(float)*this->batch);
     #pragma omp parallel for
     for (int b = 0; b < this->batch; b++) {
-        maxVal[b] = std::abs(x[b*this->input_shape]);
+        this->maxVal[b] = std::abs(x[b*this->input_shape]);
         for (int i = 1; i < this->input_shape; i++) {
-            if (maxVal[b] < std::abs(x[b*this->input_shape+i])) {
-                maxVal[b] = std::abs(x[b*this->input_shape+i]);
+            if (this->maxVal[b] < std::abs(x[b*this->input_shape+i])) {
+                this->maxVal[b] = std::abs(x[b*this->input_shape+i]);
             }
         }
     }
@@ -81,14 +96,13 @@ void Softmax::forward(float* x) {
     for (int b = 0; b < this->batch; b++) {
         tmp = 0;
         for (int i = 0; i < this->input_shape; i++) {
-            this->Y[b*this->input_shape+i] = std::exp(x[b*this->input_shape+i]/maxVal[b]);
+            this->Y[b*this->input_shape+i] = std::exp(x[b*this->input_shape+i]/this->maxVal[b]);
             tmp += this->Y[b*this->input_shape+i];
         }
         for (int i = 0; i < this->input_shape; i++) {
             this->Y[b*this->input_shape+i] = this->Y[b*this->input_shape+i] / tmp;
         }
     }
-    free(maxVal);
     return;
 }
 
