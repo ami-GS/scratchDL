@@ -63,7 +63,7 @@ int main() {
     };
     MSE* loss = new MSE();
     Network* network = new Network(7, layers, loss);
-    network->configure(batch, learning_rate, momentum_param);
+    network->configure(batch, learning_rate, momentum_param, TRAIN);
     // run
     for (int e = 0; e < epoch; e++) {
         for (int i = 0; i < NUMDSET*NUMIMG; i += batch) {
