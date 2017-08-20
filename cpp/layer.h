@@ -73,7 +73,7 @@ public:
     void backward(float* e);
 };
 
-
+/*
 class LSTM : public Layer {
 public:
     char Idx[4] = {'I', 'F', 'U', 'O'};
@@ -89,5 +89,6 @@ public:
     void forward(float* x);
     void backward(float* e);
 };
+*/
 
 #endif // CPP_LAYER_H_
