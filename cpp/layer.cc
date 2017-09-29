@@ -339,7 +339,7 @@ void MaxPooling2D::backward(float* e) {
     return;
 }
 
-
+/*
 LSTM::LSTM(int input_shape, int units) : Layer(input_shape, units) {}
 ~LSTM::LSTM() {
     for (int i = 0; i < 4; i++) {
@@ -396,3 +396,4 @@ void LSTM::forward(float* x) {
     }
     this->Y = this->buff["H"];
 }
+*/
