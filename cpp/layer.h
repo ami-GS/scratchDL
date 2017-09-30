@@ -90,4 +90,5 @@ public:
     void backward(float* e);
 };
 */
+
 #endif // CPP_LAYER_H_
