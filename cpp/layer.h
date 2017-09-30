@@ -1,7 +1,7 @@
 #ifndef CPP_LAYER_H_
 #define CPP_LAYER_H_
 
-#include <map>
+#include <vector>
 
 typedef enum {
     TRAIN,
@@ -35,7 +35,7 @@ public:
 
 class FullyConnect : public Layer {
 public:
-    float* W;
+    std::vector<float> W;
     float* B;
     FullyConnect(int input_shape, int units);
     ~FullyConnect();
@@ -46,7 +46,7 @@ public:
 
 class Conv2D : public Layer {
 public:
-    float* F;
+    std::vector<float> F;
     int i_rowcol;
     int u_rowcol;
     int kernel_size;
@@ -61,7 +61,7 @@ public:
 
 class MaxPooling2D : public Layer {
 public:
-    int* L; // locations
+    std::vector<int> L; //locations
     int i_rowcol;
     int u_rowcol;
     int kernel_size;

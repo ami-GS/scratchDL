@@ -25,7 +25,8 @@ int Layer::configure(int batch, float learning_rate, float v_param, Layer* prevL
 
 FullyConnect::FullyConnect(int input_shape, int units) : Layer(input_shape, units) {}
 FullyConnect::~FullyConnect() {
-    free(this->W);
+    this->W.clear();
+    this->W.shrink_to_fit();
     if (this->phase == TRAIN) {
         free(this->delta_buf);
     }
@@ -34,7 +35,7 @@ FullyConnect::~FullyConnect() {
 int FullyConnect::configure(int batch, float learning_rate, float v_param, Layer* prevLayer, phase_t phase) {
     Layer::configure(batch, learning_rate, v_param, prevLayer, phase);
     this->Y = (float*)malloc(sizeof(float)*this->batch*this->units);
-    this->W = (float*)malloc(sizeof(float)*this->input_shape*this->units);
+    this->W.reserve(this->input_shape*this->units);
     this->B = (float*)malloc(sizeof(float));
     if (this->phase == TRAIN) {
         this->E = (float*)malloc(sizeof(float)*this->batch*this->input_shape);
@@ -131,7 +132,8 @@ Conv2D::Conv2D(int input_shape, int channel, int filter, int kernel_size, int st
     this->filter = filter;
 }
 Conv2D::~Conv2D() {
-    free(this->F);
+    this->F.clear();
+    this->F.shrink_to_fit();
     if (this->phase == TRAIN) {
         free(this->delta_buf);
     }
@@ -144,7 +146,7 @@ int Conv2D::configure(int batch, float learning_rate, float v_param, Layer* prev
     this->Y = (float*)malloc(sizeof(float)*this->batch*this->filter*this->units);
     this->E = (float*)malloc(sizeof(float)*this->batch*this->channel*this->input_shape);
     this->delta_buf = (float*)malloc(sizeof(float)*this->batch*this->filter*this->units);
-    this->F = (float*)malloc(sizeof(float)*this->filter*this->kernel_size*this->kernel_size);
+    this->F.reserve(this->filter*this->kernel_size*this->kernel_size);
 
     std::random_device rd;
     std::mt19937 mt(rd());
@@ -171,7 +173,8 @@ void Conv2D::forward(float* x) {
                         for (int ki = 0; ki < this->kernel_size; ki++) {
                             for (int kj = 0; kj < this->kernel_size; kj++) {
                                 this->Y[b*this->units*this->filter+f*this->units+ro*this->i_rowcol+co] += \
-                                    x[b*this->input_shape*this->channel+c*this->input_shape+ro*this->i_rowcol+co+ki*this->i_rowcol+kj] * \
+                                    x[b*this->input_shape*this->channel+c*this->input_shape+\
+                                      ro*this->i_rowcol+co+ki*this->i_rowcol+kj]*\
                                     this->F[f*this->kernel_size*this->kernel_size+ki*this->kernel_size+kj];
                             }
                         }
@@ -277,7 +280,8 @@ MaxPooling2D::MaxPooling2D(int input_shape, int channel, int kernel_size, int st
 }
 MaxPooling2D::~MaxPooling2D() {
     if (this->phase == TRAIN) {
-        free(this->L);
+        this->L.clear();
+        this->L.shrink_to_fit();
     }
 }
 
@@ -285,7 +289,7 @@ int MaxPooling2D::configure(int batch, float learning_rate, float v_param, Layer
     Layer::configure(batch, learning_rate, v_param, prevLayer, phase);
     this->Y = (float*)malloc(sizeof(float)*this->batch*this->channel*this->units);
     if (this->phase == TRAIN) {
-        this->L = (int*)malloc(sizeof(int)*this->batch*this->channel*this->units);
+        this->L.reserve(this->batch*this->channel*this->units);
         this->E = (float*)malloc(sizeof(float)*this->batch*this->channel*this->input_shape);
     }
     return 1;
