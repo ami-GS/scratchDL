@@ -1,6 +1,9 @@
 #include "activation.h"
 #include <cmath>
 #include <iostream>
+#include <algorithm>
+#include <iterator>
+
 
 Activation::Activation() : Layer(0, 0) {}
 Activation::~Activation() {}
@@ -12,9 +15,9 @@ int Activation::configure(int batch, float learning_rate, float v_param, Layer* 
     }
     this->units = this->input_shape;
     Layer::configure(batch, learning_rate, v_param, prevLayer, phase);
-    this->Y = (float*)malloc(sizeof(float)*this->batch*this->input_shape);
+    this->Y.resize(this->batch*this->input_shape);
     if (this->phase == TRAIN) {
-        this->E = (float*)malloc(sizeof(float)*this->batch*this->input_shape);
+        this->E.resize(this->batch*this->input_shape);
     }
     return 1;
 }
@@ -22,19 +25,19 @@ int Activation::configure(int batch, float learning_rate, float v_param, Layer* 
 Sigmoid::Sigmoid() {}
 Sigmoid::~Sigmoid() {}
 
-void Sigmoid::forward(float* x) {
+void Sigmoid::forward(vector<float> *x) {
     #pragma omp  parallel for
     for (int bi = 0; bi < this->batch*this->input_shape; bi++) {
-        this->Y[bi] = 1/(1+std::exp(-x[bi]));
+        this->Y[bi] = 1/(1+std::exp(-x->at(bi)));
     }
     return;
 }
 
 
-void Sigmoid::backward(float* e) {
+void Sigmoid::backward(vector<float> *e) {
     #pragma omp  parallel for
     for (int bi = 0; bi < this->batch*this->input_shape; bi++) {
-        this->E[bi] = e[bi] * this->Y[bi]*(1-this->Y[bi]);
+        this->E[bi] = e->at(bi) * this->Y[bi]*(1-this->Y[bi]);
     }
     return;
 }
@@ -43,19 +46,19 @@ void Sigmoid::backward(float* e) {
 ReLU::ReLU() {}
 ReLU::~ReLU() {}
 
-void ReLU::forward(float* x) {
+void ReLU::forward(vector<float> *x) {
     #pragma omp  parallel for
     for (int bi = 0; bi < this->batch*this->input_shape; bi++) {
-        this->Y[bi] = (x[bi] > 0) * x[bi];
+        this->Y[bi] = (x->at(bi) > 0) * x->at(bi);
     }
     return;
 }
 
 
-void ReLU::backward(float* e) {
+void ReLU::backward(vector<float> *e) {
     #pragma omp  parallel for
     for (int bi = 0; bi < this->batch*this->input_shape; bi++) {
-        this->E[bi] = (this->Y[bi] > 0) * e[bi];
+        this->E[bi] = (this->Y[bi] > 0) * e->at(bi);
     }
     return;
 }
@@ -64,14 +67,14 @@ void ReLU::backward(float* e) {
 Softmax::Softmax() {}
 Softmax::~Softmax() {}
 
-void Softmax::forward(float* x) {
+void Softmax::forward(vector<float> *x) {
     float* maxVal = (float*)malloc(sizeof(float)*this->batch);
     #pragma omp parallel for
     for (int b = 0; b < this->batch; b++) {
-        maxVal[b] = std::abs(x[b*this->input_shape]);
+        maxVal[b] = std::abs(x->at(b*this->input_shape));
         for (int i = 1; i < this->input_shape; i++) {
-            if (maxVal[b] < std::abs(x[b*this->input_shape+i])) {
-                maxVal[b] = std::abs(x[b*this->input_shape+i]);
+            if (maxVal[b] < std::abs(x->at(b*this->input_shape+i))) {
+                maxVal[b] = std::abs(x->at(b*this->input_shape+i));
             }
         }
     }
@@ -81,7 +84,7 @@ void Softmax::forward(float* x) {
     for (int b = 0; b < this->batch; b++) {
         tmp = 0;
         for (int i = 0; i < this->input_shape; i++) {
-            this->Y[b*this->input_shape+i] = std::exp(x[b*this->input_shape+i]/maxVal[b]);
+            this->Y[b*this->input_shape+i] = std::exp(x->at(b*this->input_shape+i)/maxVal[b]);
             tmp += this->Y[b*this->input_shape+i];
         }
         for (int i = 0; i < this->input_shape; i++) {
@@ -91,7 +94,7 @@ void Softmax::forward(float* x) {
     return;
 }
 
-void Softmax::backward(float* e) {
-    this->E = e;
+void Softmax::backward(vector<float> *e) {
+    copy(e->begin(), e->end(), back_inserter(this->E));
     return;
 }

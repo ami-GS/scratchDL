@@ -13,7 +13,7 @@ public:
     Network(int layerNum, Layer** layers, Loss* loss);
     ~Network();
     int configure(int batch, float learning_rate, float v_param, phase_t phase);
-    void train(float* data, int* label);
+    void train(vector<float> *data, int* label);
 };
 
 

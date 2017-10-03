@@ -20,7 +20,7 @@ float all_data_float[NUMDSET*IMGSZ*NUMIMG];
 int idx_array[NUMIMG*NUMDSET];
 // to randome data
 int batch_label[batch*CLASS];
-float batch_data_float[batch*IMGSZ];
+vector<float> batch_data_float(batch*IMGSZ);
 float learning_rate = 0.001;
 float momentum_param = 0.8;
 int epoch = 2;
@@ -74,10 +74,10 @@ int main() {
                     batch_label[b*CLASS+j] = one_hot_label[idx_array[i+b]*CLASS+j];
             }
 
-            float* data = batch_data_float;
+            vector<float>* data = &batch_data_float;
             int* label = batch_label;
             if (i % 800 == 0) {
-                float err = loss->error(network->layers[6]->Y, label);
+                float err = loss->error(&network->layers[6]->Y, label);
                 std::cout << "loop " << i << " " << err << std::endl;
             }
             network->train(data, label);

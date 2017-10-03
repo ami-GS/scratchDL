@@ -3,6 +3,8 @@
 
 #include <vector>
 
+using namespace std;
+
 typedef enum {
     TRAIN,
     TEST,
@@ -20,33 +22,35 @@ public:
     Layer* nxtLayer;
     float learning_rate;
     phase_t phase;
-    float* E;
+    vector<float> E;
     // for Momentum
     float* delta_buf;
     float momentum_a;
-    float* Y;
-    float* X;
+    vector<float> Y;
+    vector<float> *X;
+    //float* Y;
+    //float* X;
     Layer(int input_shape, int units);
     virtual ~Layer();
     virtual int configure(int batch, float learning_rate, float v_param, Layer* prevLayer, phase_t phase);
-    virtual void forward(float* x) = 0;
-    virtual void backward(float* e) = 0;
+    virtual void forward(vector<float> *x) = 0;
+    virtual void backward(vector<float> *e) = 0;
 };
 
 class FullyConnect : public Layer {
 public:
-    std::vector<float> W;
+    vector<float> W;
     float* B;
     FullyConnect(int input_shape, int units);
     ~FullyConnect();
     int configure(int batch, float learning_rate, float v_param, Layer* prevLayer, phase_t phase);
-    void forward(float* x);
-    void backward(float* e);
+    void forward(vector<float> *x);
+    void backward(vector<float> *e);
 };
 
 class Conv2D : public Layer {
 public:
-    std::vector<float> F;
+    vector<float> F;
     int i_rowcol;
     int u_rowcol;
     int kernel_size;
@@ -55,13 +59,13 @@ public:
     Conv2D(int input_shape, int channel, int filter, int kernel_size, int stride, int padding);
     ~Conv2D();
     int configure(int batch, float learning_rate, float v_param, Layer* prevLayer, phase_t phase);
-    void forward(float* x);
-    void backward(float* e);
+    void forward(vector<float> *x);
+    void backward(vector<float> *e);
 };
 
 class MaxPooling2D : public Layer {
 public:
-    std::vector<int> L; //locations
+    vector<int> L; //locations
     int i_rowcol;
     int u_rowcol;
     int kernel_size;
@@ -69,8 +73,8 @@ public:
     MaxPooling2D(int input_shape, int channel, int kernel_size, int stride);
     ~MaxPooling2D();
     int configure(int batch, float learning_rate, float v_param, Layer* prevLayer, phase_t phase);
-    void forward(float* x);
-    void backward(float* e);
+    void forward(vector<float> *x);
+    void backward(vector<float> *e);
 };
 
 /*
@@ -86,8 +90,8 @@ public:
     LSTM(int input_shape, int units);
     ~LSTM();
     int configure(int batch, float learning_rate, float v_param, Layer* prevLayer, phase_t phase);
-    void forward(float* x);
-    void backward(float* e);
+    void forward(vector<float> *x);
+    void backward(vector<float> *e);
 };
 */
 

@@ -4,7 +4,8 @@
 
 Loss::Loss() {}
 Loss::~Loss() {
-    free(this->D);
+    this->D.clear();
+    this->D.shrink_to_fit();
 }
 
 int Loss::configure(int batch, Layer* prevLayer) {
@@ -13,7 +14,7 @@ int Loss::configure(int batch, Layer* prevLayer) {
     }
     this->batch = batch;
     this->batch_inv = 1/batch;
-    this->D = (float*)malloc(sizeof(float)*this->batch*this->prevLayer->units);
+    this->D.resize(this->batch*this->prevLayer->units);
     return 1;
 }
 
@@ -24,19 +25,19 @@ int MSE::configure(int batch, Layer* prevLayer) {
     return Loss::configure(batch, prevLayer);
 }
 
-float MSE::error(float* x, int* label) {
+float MSE::error(vector<float> *x, int* label) {
     float e = 0;
     #pragma omp  parallel for reduction(+:e)
     for (int i = 0; i < this->batch*this->prevLayer->units; i++) {
-        e += std::pow(x[i]-(float)label[i], 2)*0.5*this->batch_inv;
+        e += std::pow(x->at(i)-(float)label[i], 2)*0.5*this->batch_inv;
     }
     return e;
 }
 
-void MSE::partial_derivative(float* x, int* label) {
+void MSE::partial_derivative(vector<float>* x, int* label) {
     #pragma omp  parallel for
     for (int i = 0; i < this->batch*this->prevLayer->units; i++) {
-        this->D[i] = - ((float)label[i] - x[i]);
+        this->D[i] = - ((float)label[i] - x->at(i));
     }
     return;
 }
