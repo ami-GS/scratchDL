@@ -38,7 +38,6 @@ int FullyConnect::configure(int batch, float learning_rate, float v_param, Layer
     Layer::configure(batch, learning_rate, v_param, prevLayer, phase);
     this->Y.resize(this->batch*this->units);
     this->W.resize(this->input_shape*this->units);
-    this->B = (float*)malloc(sizeof(float));
     if (this->phase == TRAIN) {
         this->E.resize(this->batch*this->input_shape);
         this->delta_buf = (float*)malloc(sizeof(float)*this->batch*this->units);
@@ -50,7 +49,7 @@ int FullyConnect::configure(int batch, float learning_rate, float v_param, Layer
     for (int iu = 0; iu < this->input_shape*this->units; iu++) {
             this->W[iu] = rand(mt);
     }
-    *this->B = rand(mt);
+    this->B = rand(mt);
     return 1;
 }
 
@@ -63,7 +62,7 @@ void FullyConnect::forward(vector<float> *x) {
     for (int b = 0; b < this->batch; b++) {
         for (int i = 0; i < this->input_shape; i++) {
             for (int u = 0; u < this->units; u++) {
-                this->Y[b*this->units + u] += x->at(b*this->input_shape + i) * this->W[i*this->units + u] + *this->B;
+                this->Y[b*this->units + u] += x->at(b*this->input_shape + i) * this->W[i*this->units + u] + this->B;
             }
         }
     }
@@ -115,7 +114,7 @@ void FullyConnect::backward(vector<float> *e) {
     #pragma omp  parallel for
     for (int b = 0; b < this->batch; b++) {
         for (int u = 0; u < this->units; u++) {
-            *this->B -= this->learning_rate * e->at(b*this->units + u)*this->batch_inv;
+            this->B -= this->learning_rate * e->at(b*this->units + u)*this->batch_inv;
         }
     }
 

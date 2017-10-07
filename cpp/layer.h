@@ -40,7 +40,7 @@ public:
 class FullyConnect : public Layer {
 public:
     vector<float> W;
-    float* B;
+    float B;
     FullyConnect(int input_shape, int units);
     ~FullyConnect();
     int configure(int batch, float learning_rate, float v_param, Layer* prevLayer, phase_t phase);
