@@ -24,7 +24,7 @@ public:
     phase_t phase;
     vector<float> E;
     // for Momentum
-    float* delta_buf;
+    vector<float> delta_buf;
     float momentum_a;
     vector<float> Y;
     vector<float> *X;

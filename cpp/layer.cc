@@ -30,7 +30,8 @@ FullyConnect::~FullyConnect() {
     this->W.clear();
     this->W.shrink_to_fit();
     if (this->phase == TRAIN) {
-        free(this->delta_buf);
+        this->delta_buf.clear();
+        this->delta_buf.shrink_to_fit();
     }
 }
 
@@ -40,7 +41,7 @@ int FullyConnect::configure(int batch, float learning_rate, float v_param, Layer
     this->W.resize(this->input_shape*this->units);
     if (this->phase == TRAIN) {
         this->E.resize(this->batch*this->input_shape);
-        this->delta_buf = (float*)malloc(sizeof(float)*this->batch*this->units);
+        this->delta_buf.resize(this->batch*this->units);
     }
     std::random_device rd;
     std::mt19937 mt(rd());
@@ -136,7 +137,8 @@ Conv2D::~Conv2D() {
     this->F.clear();
     this->F.shrink_to_fit();
     if (this->phase == TRAIN) {
-        free(this->delta_buf);
+        this->delta_buf.clear();
+        this->delta_buf.shrink_to_fit();
     }
 }
 
@@ -146,7 +148,7 @@ int Conv2D::configure(int batch, float learning_rate, float v_param, Layer* prev
     //this->X = (float*)malloc(sizeof(float)*this->batch*this->channel*this->kernel_size*this->kernel_size*this->units*this->units);
     this->Y.resize(this->batch*this->filter*this->units);
     this->E.resize(this->batch*this->channel*this->input_shape);
-    this->delta_buf = (float*)malloc(sizeof(float)*this->batch*this->filter*this->units);
+    this->delta_buf.resize(this->batch*this->filter*this->units);
     this->F.resize(this->filter*this->kernel_size*this->kernel_size);
 
     std::random_device rd;
