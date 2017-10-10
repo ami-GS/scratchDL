@@ -8,9 +8,9 @@ class Network {
 public:
     float* learning_rate;
     int layerNum;
-    Layer** layers;
+    vector<Layer*>* layers;
     Loss* loss;
-    Network(int layerNum, Layer** layers, Loss* loss);
+    Network(int layerNum, Loss* loss, vector<Layer*>* vLayers);
     ~Network();
     int configure(int batch, float learning_rate, float v_param, phase_t phase);
     void train(vector<float> *data, int* label);

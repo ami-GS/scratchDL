@@ -3,11 +3,11 @@
 #include "layer.h"
 
 
-Network::Network(int layerNum, Layer** layers, Loss* loss) : layerNum(layerNum), layers(layers), loss(loss) {
+Network::Network(int layerNum, Loss* loss, vector<Layer*>* layers) : layerNum(layerNum), layers(layers), loss(loss) {
 }
 Network::~Network() {
     for (int i = 0; i < this->layerNum; i++) {
-        delete this->layers[i];
+        delete this->layers->at(i);
     }
 };
 
@@ -15,8 +15,8 @@ Network::~Network() {
 int Network::configure(int batch, float learning_rate, float v_param, phase_t phase) {
     Layer* prevLayer = nullptr;
     for (int i = 0; i < this->layerNum; i++) {
-        this->layers[i]->configure(batch, learning_rate, v_param, prevLayer, phase);
-        prevLayer = this->layers[i];
+        this->layers->at(i)->configure(batch, learning_rate, v_param, prevLayer, phase);
+        prevLayer = this->layers->at(i);
     }
     loss->configure(batch, prevLayer);
     return 1;
@@ -24,14 +24,14 @@ int Network::configure(int batch, float learning_rate, float v_param, phase_t ph
 
 void Network::train(vector<float> *data, int* label) {
     for (int j = 0; j < this->layerNum; j++) {
-        this->layers[j]->forward(data);
-        data = &this->layers[j]->Y;
+        this->layers->at(j)->forward(data);
+        data = &this->layers->at(j)->Y;
     }
     this->loss->partial_derivative(data, label);
     vector<float> *e = &this->loss->D;
     for (int j = this->layerNum-1; j >= 0; j--) {
-        this->layers[j]->backward(e);
-        e = &this->layers[j]->E;
+        this->layers->at(j)->backward(e);
+        e = &this->layers->at(j)->E;
     }
     return;
 }

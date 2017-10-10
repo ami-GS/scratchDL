@@ -51,8 +51,7 @@ int main() {
         idx_array[i] = i;
     std::shuffle(idx_array, idx_array+NUMIMG*NUMDSET, std::mt19937());
 
-    // configure layer
-    Layer* layers[7] = {
+    std::vector<Layer*> vLayers{
         new Conv2D(1024, 3, 4, 3, 1, 0),
         new MaxPooling2D(900, 4, 2, 1),
         new Sigmoid(),
@@ -61,8 +60,9 @@ int main() {
         new FullyConnect(841, 10),
         new Softmax()
     };
+    // configure layer
     MSE* loss = new MSE();
-    Network* network = new Network(7, layers, loss);
+    Network* network = new Network(7, loss, &vLayers);
     network->configure(batch, learning_rate, momentum_param, TRAIN);
     // run
     for (int e = 0; e < epoch; e++) {
@@ -77,7 +77,7 @@ int main() {
             vector<float>* data = &batch_data_float;
             int* label = batch_label;
             if (i % 800 == 0) {
-                float err = loss->error(&network->layers[6]->Y, label);
+                float err = loss->error(&network->layers->at(6)->Y, label);
                 std::cout << "loop " << i << " " << err << std::endl;
             }
             network->train(data, label);
