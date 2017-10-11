@@ -5,6 +5,16 @@
 
 Network::Network(int layerNum, Loss* loss, vector<Layer*>* layers) : layerNum(layerNum), layers(layers), loss(loss) {
 }
+
+Network::Network(Loss* loss, vector<Layer*>* layers) : layers(layers), loss(loss) {
+    for (int i = 0; ; i++) {
+        if ((*layers)[i]->input_shape == 0 && (*layers)[i]->units == 0) {
+            this->layerNum = i+1;
+            break;
+        }
+    }
+}
+
 Network::~Network() {
     for (int i = 0; i < this->layerNum; i++) {
         delete this->layers->at(i);

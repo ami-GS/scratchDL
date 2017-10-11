@@ -37,6 +37,15 @@ public:
     virtual void backward(vector<float> *e) = 0;
 };
 
+class DummyLayer : public Layer {
+public:
+    DummyLayer() : Layer(0, 0) {};
+    ~DummyLayer() {};
+    int configure(int batch, float learning_rate, float v_param, Layer* prevLayer, phase_t phase) {return 0;};
+    void forward(vector<float> *x) {};
+    void backward(vector<float> *e) {};
+};
+
 class FullyConnect : public Layer {
 public:
     vector<float> W;
