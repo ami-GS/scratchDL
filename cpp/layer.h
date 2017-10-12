@@ -2,6 +2,7 @@
 #define CPP_LAYER_H_
 
 #include <vector>
+#include <random>
 
 using namespace std;
 
@@ -28,8 +29,8 @@ public:
     float momentum_a;
     vector<float> Y;
     vector<float> *X;
-    //float* Y;
-    //float* X;
+    mt19937 mt;
+    uniform_real_distribution<float> rand;
     Layer(int input_shape, int units);
     virtual ~Layer();
     virtual int configure(int batch, float learning_rate, float v_param, Layer* prevLayer, phase_t phase);

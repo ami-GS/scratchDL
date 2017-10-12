@@ -18,6 +18,9 @@ int Layer::configure(int batch, float learning_rate, float v_param, Layer* prevL
     this->learning_rate = learning_rate;
     this->momentum_a = v_param;
     this->phase = phase;
+    std::random_device rd;
+    this->mt = std::mt19937(rd());
+    this->rand = std::uniform_real_distribution<float>(-1.0,1.0);
     if (prevLayer != nullptr) {
         prevLayer->nxtLayer = this;
         this->prevLayer = prevLayer;
@@ -43,12 +46,9 @@ int FullyConnect::configure(int batch, float learning_rate, float v_param, Layer
         this->E.resize(this->batch*this->input_shape);
         this->delta_buf.resize(this->batch*this->units);
     }
-    std::random_device rd;
-    std::mt19937 mt(rd());
-    std::uniform_real_distribution<float> rand(-1.0,1.0);
     #pragma omp  parallel for
     for (int iu = 0; iu < this->input_shape*this->units; iu++) {
-            this->W[iu] = rand(mt);
+            this->W[iu] = this->rand(this->mt);
     }
     this->B = rand(mt);
     return 1;
@@ -151,12 +151,9 @@ int Conv2D::configure(int batch, float learning_rate, float v_param, Layer* prev
     this->delta_buf.resize(this->batch*this->filter*this->units);
     this->F.resize(this->filter*this->kernel_size*this->kernel_size);
 
-    std::random_device rd;
-    std::mt19937 mt(rd());
-    std::uniform_real_distribution<float> rand(-1.0,1.0);
     #pragma omp  parallel for
     for (int i = 0; i < this->filter*this->kernel_size*this->kernel_size; i++) {
-        this->F[i] = rand(mt);
+        this->F[i] = this->rand(this->mt);
     }
 
     return 1;
@@ -370,13 +367,13 @@ int LSTM::configure(int batch, float learning_rate, float v_param, Layer* prevLa
         this->Wx[this->Idx[i]] = (float*)malloc(sizeof(float*)*this->units*this->units);
         #pragma omp  parallel for
         for (int iu = 0; iu < this->input_shape*this->units; iu++) {
-            this->Wx[this->Idx[i]][iu] = rand(mt);
+            this->Wx[this->Idx[i]][iu] = this->rand(this->mt);
         }
         #pragma omp  parallel for
         for (int uu = 0; uu < this->units*this->units; uu++) {
-            this->Wh[this->Idx[i]][uu] = rand(mt);
+            this->Wh[this->Idx[i]][uu] = this->rand(this->mt);
         }
-        *this->B[this->Idx[i]] = rand(mt);
+        *this->B[this->Idx[i]] = this->rand(this->mt);
         this->acts[this->Idx].configure(batch, learning_rate, v_param, prevLayer, phase);
     }
 
