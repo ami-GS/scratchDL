@@ -46,6 +46,25 @@ int FullyConnect::configure(int batch, float learning_rate, float v_param, Layer
         this->E.resize(this->batch*this->input_shape);
         this->delta_buf.resize(this->batch*this->units);
     }
+
+    for (int b = 32; b > 0; b /= 2) {
+        if (this->batch % b == 0) {
+            this->blkB = b;
+            break;
+        }
+    }
+    for (int i = 32; i > 0; i /= 2) {
+        if (this->input_shape % i == 0) {
+            this->blkI = i;
+            break;
+        }
+    }
+    for (int u = 32; u > 0; u /= 2) {
+        if (this->input_shape % u == 0) {
+            this->blkU = u;
+            break;
+        }
+    }
     #pragma omp  parallel for
     for (int iu = 0; iu < this->input_shape*this->units; iu++) {
             this->W[iu] = this->rand(this->mt);
@@ -59,11 +78,24 @@ void FullyConnect::forward(vector<float> *x) {
     for (int i = 0; i < this->batch*this->units; i++) {
         this->Y[i] = 0;
     }
-    #pragma omp  parallel for
-    for (int b = 0; b < this->batch; b++) {
-        for (int i = 0; i < this->input_shape; i++) {
-            for (int u = 0; u < this->units; u++) {
-                this->Y[b*this->units + u] += x->at(b*this->input_shape + i) * this->W[i*this->units + u] + this->B;
+    if (this->blkB > 0 && this->blkI > 0 && this->blkU > 0) {
+        #pragma omp parallel for
+        for (int bb = 0; bb < this->batch; bb += this->blkB) {
+            for (int ib = 0; ib < this->input_shape; ib += this->blkI) {
+                for (int ub = 0; ub < this->units; ub += this->blkU) {
+                    for (int b = 0; b < bb+this->blkB; b++) {
+                        for (int i = 0; i < ib+this->blkI; i++) {
+                            for (int u = 0; u < ub+this->blkU; u++) {
+                                this->Y[b*this->units + u] += x->at(b*this->input_shape + i) * this->W[i*this->units + u] + this->B;
+                        }}}
+            }}}
+    } else {
+        #pragma omp  parallel for
+        for (int b = 0; b < this->batch; b++) {
+            for (int i = 0; i < this->input_shape; i++) {
+                for (int u = 0; u < this->units; u++) {
+                    this->Y[b*this->units + u] += x->at(b*this->input_shape + i) * this->W[i*this->units + u] + this->B;
+                }
             }
         }
     }
