@@ -15,7 +15,6 @@ class Layer {
 public:
     int batch;
     float batch_inv;
-    int filter;
     int channel;
     int input_shape;
     int units;
@@ -64,6 +63,7 @@ public:
 class Conv2D : public Layer {
 public:
     vector<float> F;
+    int filter;
     int i_rowcol;
     int u_rowcol;
     int kernel_size;

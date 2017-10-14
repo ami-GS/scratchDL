@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <random>
 
-Layer::Layer(int input_shape, int units) : batch(1), filter(0), channel(0), input_shape(input_shape), units(units), prevLayer(nullptr), momentum_a(1.0) {}
+Layer::Layer(int input_shape, int units) : batch(1), channel(0), input_shape(input_shape), units(units), prevLayer(nullptr), momentum_a(1.0) {}
 Layer::~Layer() {
     this->Y.clear();
     this->Y.shrink_to_fit();
@@ -155,7 +155,7 @@ void FullyConnect::backward(vector<float> *e) {
 }
 
 
-Conv2D::Conv2D(int input_shape, int channel, int filter, int kernel_size, int stride, int padding) : Layer(input_shape, 0), i_rowcol((int)std::sqrt((float)input_shape)), kernel_size(kernel_size), stride(stride), padding(padding) {
+Conv2D::Conv2D(int input_shape, int channel, int filter, int kernel_size, int stride, int padding) : Layer(input_shape, 0), i_rowcol((int)std::sqrt((float)input_shape)), filter(filter), kernel_size(kernel_size), stride(stride), padding(padding) {
     if (stride <= 0) {
         // warning
         this->stride = 1;
@@ -163,8 +163,8 @@ Conv2D::Conv2D(int input_shape, int channel, int filter, int kernel_size, int st
     this->u_rowcol = (this->i_rowcol + 2*padding - kernel_size)/stride + 1;
     this->units = this->u_rowcol*this->u_rowcol;
     this->channel = channel;
-    this->filter = filter;
 }
+
 Conv2D::~Conv2D() {
     this->F.clear();
     this->F.shrink_to_fit();
