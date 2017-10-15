@@ -65,16 +65,20 @@ void ReLU::backward(vector<float> *e) {
 
 
 Softmax::Softmax() {}
-Softmax::~Softmax() {}
+Softmax::~Softmax() {
+    delete this->maxVal;
+}
 
 void Softmax::forward(vector<float> *x) {
-    float* maxVal = (float*)malloc(sizeof(float)*this->batch);
+    if (this->maxVal == nullptr) {
+        this->maxVal = (float*)malloc(sizeof(float)*this->batch);
+    }
     #pragma omp parallel for
     for (int b = 0; b < this->batch; b++) {
         maxVal[b] = std::abs(x->at(b*this->input_shape));
         for (int i = 1; i < this->input_shape; i++) {
-            if (maxVal[b] < std::abs(x->at(b*this->input_shape+i))) {
-                maxVal[b] = std::abs(x->at(b*this->input_shape+i));
+            if (this->maxVal[b] < std::abs(x->at(b*this->input_shape+i))) {
+                this->maxVal[b] = std::abs(x->at(b*this->input_shape+i));
             }
         }
     }
@@ -84,7 +88,7 @@ void Softmax::forward(vector<float> *x) {
     for (int b = 0; b < this->batch; b++) {
         tmp = 0;
         for (int i = 0; i < this->input_shape; i++) {
-            this->Y[b*this->input_shape+i] = std::exp(x->at(b*this->input_shape+i)/maxVal[b]);
+            this->Y[b*this->input_shape+i] = std::exp(x->at(b*this->input_shape+i)/this->maxVal[b]);
             tmp += this->Y[b*this->input_shape+i];
         }
         for (int i = 0; i < this->input_shape; i++) {

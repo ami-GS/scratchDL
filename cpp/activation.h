@@ -31,6 +31,7 @@ public:
 
 class Softmax : public Activation {
 public:
+    float* maxVal;
     Softmax();
     ~Softmax();
     void forward(vector<float> *x);
