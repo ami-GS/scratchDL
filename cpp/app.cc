@@ -62,7 +62,7 @@ int main() {
     };
     // configure layer
     MSE* loss = new MSE();
-    Network* network = new Network(vLayers.size(), loss, &vLayers);
+    Network* network = new Network(loss, &vLayers);
     network->configure(batch, learning_rate, momentum_param, TRAIN);
     // run
     for (int e = 0; e < epoch; e++) {
