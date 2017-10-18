@@ -40,3 +40,7 @@ void Network::train(vector<float> *data, int* label) {
     }
     return;
 }
+
+float Network::getLossError(int* label) {
+    return this->loss->error(&this->layers->back()->Y, label);
+}

@@ -77,7 +77,7 @@ int main() {
             vector<float>* data = &batch_data_float;
             int* label = batch_label;
             if (i % 800 == 0) {
-                float err = loss->error(&network->layers->at(6)->Y, label);
+                float err = network->getLossError(label);
                 std::cout << "loop " << i << " " << err << std::endl;
             }
             network->train(data, label);

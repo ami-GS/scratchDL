@@ -15,6 +15,7 @@ public:
     ~Network();
     int configure(int batch, float learning_rate, float v_param, phase_t phase);
     void train(vector<float> *data, int* label);
+    float getLossError(int* label);
 };
 
 
