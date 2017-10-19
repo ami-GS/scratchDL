@@ -86,7 +86,7 @@ void FullyConnect::forward(vector<float> *x) {
                     for (int b = 0; b < bb+this->blkB; b++) {
                         for (int i = 0; i < ib+this->blkI; i++) {
                             for (int u = 0; u < ub+this->blkU; u++) {
-                                this->Y[b*this->units + u] += x->at(b*this->input_shape + i) * this->W[i*this->units + u] + this->B;
+                                this->Y[b*this->units + u] += (*x)[b*this->input_shape + i] * this->W[i*this->units + u] + this->B;
                         }}}
             }}}
     } else {
@@ -94,7 +94,7 @@ void FullyConnect::forward(vector<float> *x) {
         for (int b = 0; b < this->batch; b++) {
             for (int i = 0; i < this->input_shape; i++) {
                 for (int u = 0; u < this->units; u++) {
-                    this->Y[b*this->units + u] += x->at(b*this->input_shape + i) * this->W[i*this->units + u] + this->B;
+                    this->Y[b*this->units + u] += (*x)[b*this->input_shape + i] * this->W[i*this->units + u] + this->B;
                 }
             }
         }
@@ -114,7 +114,7 @@ void FullyConnect::backward(vector<float> *e) {
     for (int b = 0; b < this->batch; b++) {
         for (int u = 0; u < this->units; u++) {
             for (int i = 0; i < this->input_shape; i++) {
-                this->E[b*this->input_shape + i] += e->at(b*this->units + u) * this->W[i*this->units+u];
+                this->E[b*this->input_shape + i] += (*e)[b*this->units + u] * this->W[i*this->units+u];
             }
         }
     }
@@ -126,19 +126,19 @@ void FullyConnect::backward(vector<float> *e) {
             for (int i = 0; i < this->input_shape; i++) {
                 for (int u = 0; u < this->units; u++) {
                     this->W[i*this->units + u] -= this->momentum_a * this->delta_buf[b*this->units + u] + \
-                        (this->learning_rate * this->X->at(b*this->input_shape + i) * e->at(b*this->units + u))*this->batch_inv;
+                        (this->learning_rate * (*this->X)[b*this->input_shape + i] * (*e)[b*this->units + u])*this->batch_inv;
                 }
             }
         }
         #pragma omp parallel for
         for (int i = 0; i < this->batch*this->units; i++) {
-            this->delta_buf[i] = e->at(i);
+            this->delta_buf[i] = (*e)[i];
         }
     } else {
         for (int b = 0; b < this->batch; b++) {
             for (int i = 0; i < this->input_shape; i++) {
                 for (int u = 0; u < this->units; u++) {
-                    this->W[i*this->units + u] -= this->learning_rate * this->X->at(b*this->input_shape + i) * e->at(b*this->units + u)*this->batch_inv;
+                    this->W[i*this->units + u] -= this->learning_rate * (*this->X)[b*this->input_shape + i] * (*e)[b*this->units + u]*this->batch_inv;
                 }
             }
         }
@@ -147,7 +147,7 @@ void FullyConnect::backward(vector<float> *e) {
     #pragma omp  parallel for
     for (int b = 0; b < this->batch; b++) {
         for (int u = 0; u < this->units; u++) {
-            this->B -= this->learning_rate * e->at(b*this->units + u)*this->batch_inv;
+            this->B -= this->learning_rate * (*e)[b*this->units + u]*this->batch_inv;
         }
     }
 
@@ -205,8 +205,8 @@ void Conv2D::forward(vector<float> *x) {
                         for (int ki = 0; ki < this->kernel_size; ki++) {
                             for (int kj = 0; kj < this->kernel_size; kj++) {
                                 this->Y[b*this->units*this->filter+f*this->units+ro*this->i_rowcol+co] += \
-                                    x->at(b*this->input_shape*this->channel+c*this->input_shape+ \
-                                          ro*this->i_rowcol+co+ki*this->i_rowcol+kj)* \
+                                    (*x)[b*this->input_shape*this->channel+c*this->input_shape+ \
+                                          ro*this->i_rowcol+co+ki*this->i_rowcol+kj]* \
                                     this->F[f*this->kernel_size*this->kernel_size+ki*this->kernel_size+kj];
                             }
                         }
@@ -259,10 +259,11 @@ void Conv2D::backward(vector<float> *e) {
                             for (int ki = 0; ki < this->kernel_size; ki++) {
                                 for (int kj = 0; kj < this->kernel_size; kj++) {
                                     this->F[f*this->kernel_size*this->kernel_size+ki*this->kernel_size+kj] -= \
-                                        this->momentum_a * this->delta_buf[b*this->filter*this->units+f*this->units+ro*this->u_rowcol+co] + \
-                                        (this->learning_rate * this->X->at(b*this->channel*this->input_shape+c*this->input_shape+ \
-                                                                           ro*this->i_rowcol+co+ki*this->i_rowcol+kj) * \
-                                         e->at(b*this->filter*this->units+f*this->units+ro*this->u_rowcol+co))*this->batch_inv;
+                                        this->momentum_a * this->delta_buf[b*this->filter*this->units+f * \
+                                                                           this->units+ro*this->u_rowcol+co] + \
+                                        (this->learning_rate * (*this->X)[b*this->channel*this->input_shape+c*this->input_shape+ \
+                                                                          ro*this->i_rowcol+co+ki*this->i_rowcol+kj] * \
+                                                                (*e)[b*this->filter*this->units+f*this->units+ro*this->u_rowcol+co])*this->batch_inv;
                                 }
                             }
                         }
@@ -272,7 +273,7 @@ void Conv2D::backward(vector<float> *e) {
         }
         #pragma omp parallel for
         for (int i = 0; i < this->batch*this->filter*this->units; i++) {
-            this->delta_buf[i] = e->at(i);
+            this->delta_buf[i] = (*e)[i];
         }
     } else {
         #pragma omp  parallel for
@@ -284,9 +285,9 @@ void Conv2D::backward(vector<float> *e) {
                             for (int ki = 0; ki < this->kernel_size; ki++) {
                                 for (int kj = 0; kj < this->kernel_size; kj++) {
                                     this->F[f*this->kernel_size*this->kernel_size+ki*this->kernel_size+kj] -= \
-                                        this->learning_rate * this->X->at(b*this->channel*this->input_shape+c*this->input_shape+ \
-                                                                          ro*this->i_rowcol+co+ki*this->i_rowcol+kj) * \
-                                        e->at(b*this->filter*this->units+f*this->units+ro*this->u_rowcol+co)*this->batch_inv;
+                                        this->learning_rate * (*this->X)[b*this->channel*this->input_shape+c*this->input_shape+ \
+                                                                          ro*this->i_rowcol+co+ki*this->i_rowcol+kj] * \
+                                        (*e)[b*this->filter*this->units+f*this->units+ro*this->u_rowcol+co]*this->batch_inv;
                                 }
                             }
                         }
@@ -335,11 +336,11 @@ void MaxPooling2D::forward(vector<float>* x) {
         for (int c = 0; c < this->channel; c++) {
             for (int ro = 0; ro < this->u_rowcol; ro++) {
                 for (int co = 0; co < this->u_rowcol; co++) {
-                    tmp = x->at(b*this->channel*this->input_shape+c*this->input_shape+ro*this->i_rowcol+co);
+                    tmp = (*x)[b*this->channel*this->input_shape+c*this->input_shape+ro*this->i_rowcol+co];
                     for (int ki = 0; ki < this->kernel_size; ki++) {
                         for (int kj = 1; kj < this->kernel_size; kj++) {
-                            if (tmp < x->at(b*this->channel*this->input_shape+c*this->input_shape+ro*this->i_rowcol+co+ki*this->i_rowcol+kj)) {
-                                tmp = x->at(b*this->channel*this->input_shape+c*this->input_shape+ro*this->i_rowcol+co+ki*this->i_rowcol+kj);
+                            if (tmp < (*x)[b*this->channel*this->input_shape+c*this->input_shape+ro*this->i_rowcol+co+ki*this->i_rowcol+kj]) {
+                                tmp = (*x)[b*this->channel*this->input_shape+c*this->input_shape+ro*this->i_rowcol+co+ki*this->i_rowcol+kj];
                                 this->Y[b*this->channel*this->units+c*this->units+ro*this->u_rowcol+co] = tmp;
                                 if (this->phase == TRAIN) {
                                     this->L[b*this->channel*this->units+c*this->units+ro*this->u_rowcol+co] = ki*this->i_rowcol+kj;
@@ -367,7 +368,7 @@ void MaxPooling2D::backward(vector<float> *e) {
                 for (int co = 0; co < this->u_rowcol; co++) {
                     this->E[b*this->input_shape*this->channel+c*this->input_shape+ro*this->i_rowcol+co+ \
                             this->L[b*this->units*this->channel+c*this->units+ro*this->u_rowcol+co]] = \
-                        e->at(b*this->units*this->channel+c*this->units+ro*this->u_rowcol+co);
+                        (*e)[b*this->units*this->channel+c*this->units+ro*this->u_rowcol+co];
                 }
             }
         }
