@@ -110,11 +110,24 @@ void FullyConnect::backward(vector<float> *e) {
     for (int i = 0; i < this->batch*this->input_shape; i++) {
         this->E[i] = 0;
     }
-    #pragma omp  parallel for
-    for (int b = 0; b < this->batch; b++) {
-        for (int u = 0; u < this->units; u++) {
-            for (int i = 0; i < this->input_shape; i++) {
-                this->E[b*this->input_shape + i] += (*e)[b*this->units + u] * this->W[i*this->units+u];
+    if (this->blkB > 0 && this->blkI > 0 && this->blkU > 0) {
+        #pragma omp  parallel for
+        for (int bb = 0; bb < this->batch; bb += this->blkB) {
+            for (int ib = 0; ib < this->input_shape; ib += this->blkI) {
+                for (int ub = 0; ub < this->units; ub += this->blkU) {
+                    for (int b = 0; b < bb+this->blkB; b++) {
+                        for (int i = 0; i < ib+this->blkI; i++) {
+                            for (int u = 0; u < ub+this->blkU; u++) {
+                                this->E[b*this->input_shape + i] += (*e)[b*this->units + u] * this->W[i*this->units+u];
+                            }}}
+                }}}
+    } else {
+        #pragma omp  parallel for
+        for (int b = 0; b < this->batch; b++) {
+            for (int u = 0; u < this->units; u++) {
+                for (int i = 0; i < this->input_shape; i++) {
+                    this->E[b*this->input_shape + i] += (*e)[b*this->units + u] * this->W[i*this->units+u];
+                }
             }
         }
     }
